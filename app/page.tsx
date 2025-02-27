@@ -1,13 +1,25 @@
-import SnakeGame from "@/components/snake-game"
+"use client"
+
+import { useState } from "react"
+import { GameSetup, GameConfig } from "@/components/game-setup"
+import SnakeGame from "@/components/game"
 
 export default function Home() {
+  const [gameConfig, setGameConfig] = useState<GameConfig | null>(null);
+
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-black p-4">
-      <h1 className="mb-6 text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600">
-        NEON SNAKE
-      </h1>
-      <SnakeGame />
+      {!gameConfig ? (
+        <GameSetup onStart={setGameConfig} />
+      ) : (
+        <div className="space-y-6">
+          <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600">
+            SNAPDRAGON
+          </h1>
+          <SnakeGame config={gameConfig} />
+        </div>
+      )}
     </main>
-  )
+  );
 }
 
