@@ -7,6 +7,14 @@ import ParticleSystem from "@/utils/particle-system"
 import { Snake } from "@/utils/snake"
 import { Food } from "@/utils/food"
 import { AISnake } from "@/utils/ai-snake"
+import { SettingsManager } from "@/utils/settings"
+import { AudioSystem } from "@/utils/audio-system"
+import { PowerUp, PowerUpType } from "@/utils/power-up"
+import { AssetManager } from "@/utils/asset-manager"
+import { Transitions } from "@/utils/transitions"
+import { LoadingScreen } from "@/components/loading-screen"
+import { TouchControls } from "@/components/touch-controls"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 // Game states
 type GameState = "menu" | "playing" | "paused" | "gameOver"
@@ -16,6 +24,8 @@ export default function SnakeGame() {
     const [gameState, setGameState] = useState<GameState>("menu")
     const [score, setScore] = useState(0)
     const [highScore, setHighScore] = useState(0)
+    const [loading, setLoading] = useState(true)
+    const [loadingProgress, setLoadingProgress] = useState(0)
 
   // Game loop reference to store animation frame ID
     const gameLoopRef = useRef<number>(0)
@@ -25,6 +35,10 @@ export default function SnakeGame() {
     const foodRef = useRef<Food[]>([])
     const aiSnakesRef = useRef<AISnake[]>([])
     const particleSystemsRef = useRef<ParticleSystem[]>([])
+    const powerUpsRef = useRef<PowerUp[]>([])
+    const settingsRef = useRef<SettingsManager>(SettingsManager.getInstance())
+    const audioRef = useRef<AudioSystem>(AudioSystem.getInstance())
+    const assetManagerRef = useRef<AssetManager>(AssetManager.getInstance())
 
   // Input state
     const keysPressed = useRef<Set<string>>(new Set())
@@ -32,6 +46,11 @@ export default function SnakeGame() {
   // Canvas dimensions
     const canvasWidth = 800
     const canvasHeight = 600
+
+  // Add responsive state
+  const isMobile = useMediaQuery("(max-width: 768px)")
+  const [touchDirection, setTouchDirection] = useState({ x: 0, y: 0 })
+  const [isBoosting, setIsBoosting] = useState(false)
 
   // Initialize game
     useEffect(() => {
@@ -47,6 +66,14 @@ export default function SnakeGame() {
       setHighScore(Number.parseInt(savedHighScore))
     }
 
+    // Load settings
+    const settings = settingsRef.current.getSettings()
+    
+    // Start background music
+    if (settings.soundEnabled) {
+      audioRef.current.playMusic()
+    }
+
     // Set up event listeners
     window.addEventListener("keydown", handleKeyDown)
     window.addEventListener("keyup", handleKeyUp)
@@ -56,6 +83,29 @@ export default function SnakeGame() {
       window.removeEventListener("keyup", handleKeyUp)
       cancelAnimationFrame(gameLoopRef.current)
     }
+  }, [])
+
+  // Add loading effect
+  useEffect(() => {
+    const loadAssets = async () => {
+      try {
+        await assetManagerRef.current.loadAll()
+        setLoading(false)
+      } catch (error) {
+        console.error('Failed to load assets:', error)
+        // Handle error appropriately
+      }
+    }
+
+    const updateProgress = () => {
+      setLoadingProgress(assetManagerRef.current.getLoadingProgress())
+      if (loading) {
+        requestAnimationFrame(updateProgress)
+      }
+    }
+
+    loadAssets()
+    updateProgress()
   }, [])
 
   // Handle key press
@@ -133,12 +183,18 @@ export default function SnakeGame() {
 
     particleSystemsRef.current = []
 
+    // Reset power-ups
+    powerUpsRef.current = []
+
     // Reset score
     setScore(0)
 
     // Start game
     setGameState("playing")
     gameLoopRef.current = requestAnimationFrame(gameLoop)
+    
+    // Play start sound
+    audioRef.current.playSound("collect")
   }
 
   // Main game loop
@@ -181,12 +237,45 @@ export default function SnakeGame() {
       food.update()
       food.draw(ctx)
     }
+
+    // Draw power-ups
+    for (const powerUp of powerUpsRef.current) {
+      powerUp.update()
+      powerUp.draw(ctx)
+    }
   }
 
   // 2. Input System
   const inputSystem = () => {
     if (!playerSnakeRef.current) return
-    handleInput()
+
+    if (isMobile) {
+      // Convert touch direction to angle
+      if (touchDirection.x !== 0 || touchDirection.y !== 0) {
+        const targetAngle = Math.atan2(touchDirection.y, touchDirection.x);
+        const currentAngle = playerSnakeRef.current.angle;
+        
+        // Smooth rotation towards target angle
+        const angleDiff = targetAngle - currentAngle;
+        const normalizedDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+        
+        if (normalizedDiff > 0.1) {
+          playerSnakeRef.current.turnRight();
+        } else if (normalizedDiff < -0.1) {
+          playerSnakeRef.current.turnLeft();
+        }
+      }
+
+      // Handle boost
+      if (isBoosting) {
+        playerSnakeRef.current.boost();
+      } else {
+        playerSnakeRef.current.normalSpeed();
+      }
+    } else {
+      // Existing keyboard controls
+      handleInput();
+    }
   }
 
   // 3. Physics System
@@ -205,6 +294,7 @@ export default function SnakeGame() {
   const collisionSystem = () => {
     checkFoodCollisions(ctx)
     checkSnakeCollisions()
+    checkPowerUpCollisions()
   }
 
   // 5. AI System
@@ -532,12 +622,32 @@ export default function SnakeGame() {
     ctx.textAlign = "left"
     ctx.fillText(`SCORE: ${score}`, 20, 30)
     ctx.fillText(`HIGH SCORE: ${highScore}`, 20, 60)
+
+    // Draw active power-ups
+    if (playerSnakeRef.current) {
+      const activePowerUps = playerSnakeRef.current.activePowerUps
+      let i = 0
+      activePowerUps.forEach((endTime, type) => {
+        if (Date.now() < endTime) {
+          const timeLeft = Math.ceil((endTime - Date.now()) / 1000)
+          ctx.fillStyle = "#fff"
+          ctx.font = '16px "Courier New", monospace'
+          ctx.fillText(
+            `${type.toUpperCase()}: ${timeLeft}s`,
+            20,
+            100 + i * 25
+          )
+          i++
+        }
+      })
+    }
   }
 
   // Game over
   const gameOver = () => {
     setGameState("gameOver")
     cancelAnimationFrame(gameLoopRef.current)
+    audioRef.current.playSound("gameover")
 
     // Create explosion effect at player head
     if (playerSnakeRef.current) {
@@ -654,19 +764,197 @@ export default function SnakeGame() {
     )
   }
 
+  // Add power-up spawning
+  const spawnPowerUp = () => {
+    const types: PowerUpType[] = ["speed", "invulnerability", "ghost"]
+    const randomType = types[Math.floor(Math.random() * types.length)]
+
+    let validPosition = false
+    let x, y
+
+    while (!validPosition) {
+      x = Math.random() * (canvasWidth - 40) + 20
+      y = Math.random() * (canvasHeight - 40) + 20
+      validPosition = true
+
+      // Check distance from player and AI snakes
+      if (playerSnakeRef.current) {
+        for (const segment of playerSnakeRef.current.segments) {
+          const distance = Math.hypot(segment.x - x, segment.y - y)
+          if (distance < 50) {
+            validPosition = false
+            break
+          }
+        }
+      }
+
+      if (validPosition) {
+        for (const aiSnake of aiSnakesRef.current) {
+          for (const segment of aiSnake.segments) {
+            const distance = Math.hypot(segment.x - x, segment.y - y)
+            if (distance < 50) {
+              validPosition = false
+              break
+            }
+          }
+          if (!validPosition) break
+        }
+      }
+    }
+
+    powerUpsRef.current.push(
+      new PowerUp({
+        x: x!,
+        y: y!,
+        type: randomType,
+      })
+    )
+  }
+
+  // Check power-up collisions
+  const checkPowerUpCollisions = () => {
+    if (!playerSnakeRef.current) return
+
+    const playerHead = playerSnakeRef.current.getHead()
+    powerUpsRef.current = powerUpsRef.current.filter((powerUp) => {
+      const distance = Math.hypot(
+        playerHead.x - powerUp.position.x,
+        playerHead.y - powerUp.position.y
+      )
+
+      if (distance < playerHead.radius + powerUp.radius) {
+        // Apply power-up effect
+        playerSnakeRef.current?.collectPowerUp(powerUp)
+
+        // Create particle effect
+        particleSystemsRef.current.push(
+          new ParticleSystem({
+            x: powerUp.position.x,
+            y: powerUp.position.y,
+            color: powerUp.color,
+            particleCount: 30,
+            lifetime: 40,
+          })
+        )
+
+        return false
+      }
+      return true
+    })
+  }
+
+  // Occasionally spawn power-ups
+  useEffect(() => {
+    if (gameState !== "playing") return
+
+    const powerUpInterval = setInterval(() => {
+      if (Math.random() < 0.3 && powerUpsRef.current.length < 3) {
+        spawnPowerUp()
+      }
+    }, 10000) // Every 10 seconds
+
+    return () => clearInterval(powerUpInterval)
+  }, [gameState])
+
+  // Update state transitions
+  const changeGameState = async (newState: GameState) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+
+    // Exit transition
+    await Transitions.fade(ctx, 'out', 300)
+    
+    setGameState(newState)
+    
+    // Enter transition
+    await Transitions.fade(ctx, 'in', 300)
+  }
+
+  // Update canvas size on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+
+      const { width, height } = getCanvasDimensions();
+      canvas.width = width;
+      canvas.height = height;
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial size
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isMobile]);
+
+  // Handle touch controls
+  const handleDirectionChange = (direction: { x: number; y: number }) => {
+    setTouchDirection(direction);
+  };
+
+  // Update input system to handle both keyboard and touch
+  const inputSystem = () => {
+    if (!playerSnakeRef.current) return;
+
+    if (isMobile) {
+      // Convert touch direction to angle
+      if (touchDirection.x !== 0 || touchDirection.y !== 0) {
+        const targetAngle = Math.atan2(touchDirection.y, touchDirection.x);
+        const currentAngle = playerSnakeRef.current.angle;
+        
+        // Smooth rotation towards target angle
+        const angleDiff = targetAngle - currentAngle;
+        const normalizedDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
+        
+        if (normalizedDiff > 0.1) {
+          playerSnakeRef.current.turnRight();
+        } else if (normalizedDiff < -0.1) {
+          playerSnakeRef.current.turnLeft();
+        }
+      }
+
+      // Handle boost
+      if (isBoosting) {
+        playerSnakeRef.current.boost();
+      } else {
+        playerSnakeRef.current.normalSpeed();
+      }
+    } else {
+      // Existing keyboard controls
+      handleInput();
+    }
+  };
+
+  // Update render method to include touch controls
   return (
     <div className="relative">
-      <canvas
-        ref={canvasRef}
-        width={canvasWidth}
-        height={canvasHeight}
-        className="border border-cyan-900 rounded-lg shadow-lg shadow-cyan-500/20"
-      />
+      {loading ? (
+        <LoadingScreen progress={loadingProgress} />
+      ) : (
+        <>
+          <canvas
+            ref={canvasRef}
+            className="border border-cyan-900 rounded-lg shadow-lg shadow-cyan-500/20"
+          />
 
-      {gameState === "menu" && renderMenu()}
-      {gameState === "paused" && renderPauseScreen()}
-      {gameState === "gameOver" && renderGameOverScreen()}
-      {renderGameControls()}
+          {gameState === "menu" && renderMenu()}
+          {gameState === "paused" && renderPauseScreen()}
+          {gameState === "gameOver" && renderGameOverScreen()}
+          {renderGameControls()}
+
+          {/* Show touch controls on mobile during gameplay */}
+          {isMobile && gameState === "playing" && (
+            <TouchControls
+              onDirectionChange={handleDirectionChange}
+              onBoostStart={() => setIsBoosting(true)}
+              onBoostEnd={() => setIsBoosting(false)}
+            />
+          )}
+        </>
+      )}
     </div>
   )
 }
