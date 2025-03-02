@@ -1,4 +1,4 @@
-export type AIBehaviorType = 'hunter' | 'survivor' | 'collector' | 'territorial' | 'aggressive' | 'passive';
+export type AIBehaviorType = 'hunter' | 'survivor' | 'collector' | 'territorial' | 'aggressive' | 'passive' | 'mixed';
 
 interface AIBehaviorRule {
   name: string;
@@ -12,7 +12,7 @@ interface AIBehaviorRule {
   territoryRadius: number;
 }
 
-export const AI_BEHAVIORS: Record<AIBehaviorType, AIBehaviorRule> = {
+export const AI_BEHAVIORS: Record<Exclude<AIBehaviorType, 'mixed'>, AIBehaviorRule> = {
   hunter: {
     name: "Hunter",
     description: "Actively hunts other snakes while collecting food",
@@ -64,7 +64,7 @@ export const AI_BEHAVIORS: Record<AIBehaviorType, AIBehaviorRule> = {
     headColor: "#ff00ff",
     speed: 1.3,
     turnRate: 1.2,
-    aggressiveness: 1.0,
+    aggressiveness: 1.5,
     foodPriority: 0.3,
     territoryRadius: 0,
   },
@@ -79,4 +79,9 @@ export const AI_BEHAVIORS: Record<AIBehaviorType, AIBehaviorRule> = {
     foodPriority: 0.8,
     territoryRadius: 0,
   },
+};
+
+export const getRandomBehavior = (): Exclude<AIBehaviorType, 'mixed'> => {
+  const behaviors = Object.keys(AI_BEHAVIORS) as Exclude<AIBehaviorType, 'mixed'>[];
+  return behaviors[Math.floor(Math.random() * behaviors.length)];
 }; 

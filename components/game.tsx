@@ -15,9 +15,18 @@ import { Transitions } from "@/utils/transitions"
 import { LoadingScreen } from "@/components/loading-screen"
 import { TouchControls } from "@/components/touch-controls"
 import { useMediaQuery } from "@/hooks/use-media-query"
+import { AIBehaviorType, AI_BEHAVIORS, getRandomBehavior } from "@/utils/ai-behaviors"
+import { SnakeRemains } from '@/utils/snake-remains'
 
 // Game states
 type GameState = "menu" | "playing" | "paused" | "gameOver"
+
+// Add these constants near the top of the component
+const MIN_FOOD_COUNT = 3;
+const MAX_FOOD_COUNT = 6;
+
+// Add this constant at the top of the file with other constants
+const BEHAVIOR_OPTIONS: AIBehaviorType[] = ['passive', 'aggressive', 'territorial', 'mixed'];
 
 export default function SnakeGame() {
     const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -52,13 +61,32 @@ export default function SnakeGame() {
   const [touchDirection, setTouchDirection] = useState({ x: 0, y: 0 })
   const [isBoosting, setIsBoosting] = useState(false)
 
+  // Add at the top with other state
+  const [aiSnakeCount, setAiSnakeCount] = useState(2);
+  const [aiDifficulty, setAiDifficulty] = useState<'easy' | 'medium' | 'hard'>('medium');
+  const [aiBehavior, setAiBehavior] = useState<AIBehaviorType>('mixed');
+
+  // Update the state to track individual snake behaviors
+  const [aiSnakes, setAiSnakes] = useState<Array<{
+    behavior: Exclude<AIBehaviorType, 'mixed'>;
+    color: string;
+  }>>([
+    { behavior: 'passive', color: "#0f0" },
+    { behavior: 'aggressive', color: "#f00" },
+  ]);
+
+  // Add new state for remains
+  const remainsRef = useRef<SnakeRemains[]>([]);
+
   // Initialize game
     useEffect(() => {
+    console.log('Component mounted');
     const canvas = canvasRef.current
     if (!canvas) return
 
     canvas.width = canvasWidth
     canvas.height = canvasHeight
+    console.log('Canvas initialized:', { width: canvasWidth, height: canvasHeight });
 
     // Load high score from localStorage
     const savedHighScore = localStorage.getItem("snakeHighScore")
@@ -75,15 +103,51 @@ export default function SnakeGame() {
     }
 
     // Set up event listeners
-    window.addEventListener("keydown", handleKeyDown)
-    window.addEventListener("keyup", handleKeyUp)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      console.log('Key pressed:', key);
+      
+      // Prevent default behavior for game control keys
+      if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+        e.preventDefault();
+        keysPressed.current.add(key);
+      }
+
+      // Game control keys
+      if (key === "escape" && gameState === "playing") {
+        setGameState("paused");
+      } else if (key === "escape" && gameState === "paused") {
+        setGameState("playing");
+      } else if ((key === " " || key === "enter") && gameState === "menu") {
+        startGame();
+      } else if (key === "r" && gameState === "gameOver") {
+        startGame();
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      const key = e.key.toLowerCase();
+      console.log('Key released:', key);
+      keysPressed.current.delete(key);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    // Draw initial grid
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+      drawGrid(ctx);
+    }
 
     return () => {
-      window.removeEventListener("keydown", handleKeyDown)
-      window.removeEventListener("keyup", handleKeyUp)
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
       cancelAnimationFrame(gameLoopRef.current)
     }
-  }, [])
+  }, [gameState])
 
   // Add loading effect
   useEffect(() => {
@@ -108,191 +172,204 @@ export default function SnakeGame() {
     updateProgress()
   }, [])
 
-  // Handle key press
-  const handleKeyDown = (e: KeyboardEvent) => {
-    keysPressed.current.add(e.key.toLowerCase())
-
-    // Handle pause
-    if (e.key === "Escape" && gameState === "playing") {
-      setGameState("paused")
-      cancelAnimationFrame(gameLoopRef.current)
-    } else if (e.key === "Escape" && gameState === "paused") {
-      setGameState("playing")
-      gameLoopRef.current = requestAnimationFrame(gameLoop)
-    }
-
-    // Start game with space or enter
-    if ((e.key === " " || e.key === "Enter") && gameState === "menu") {
-      startGame()
-    }
-
-    // Restart game with R
-    if (e.key.toLowerCase() === "r" && gameState === "gameOver") {
-      startGame()
-    }
-  }
-
-  // Handle key release
-  const handleKeyUp = (e: KeyboardEvent) => {
-    keysPressed.current.delete(e.key.toLowerCase())
-  }
+  // Add to the top of the component
+  useEffect(() => {
+    console.log('Game state changed:', gameState);
+  }, [gameState]);
 
   // Start a new game
   const startGame = () => {
-    // Reset game objects
-    playerSnakeRef.current = new Snake({
-      x: canvasWidth / 2,
-      y: canvasHeight / 2,
-      color: "#0ff",
-      headColor: "#f0f",
-      initialLength: 5,
-      initialAngle: Math.PI / 2,
-      speed: 2,
-    })
-
-    foodRef.current = [
-      new Food({
-        x: Math.random() * (canvasWidth - 40) + 20,
-        y: Math.random() * (canvasHeight - 40) + 20,
-        type: "regular",
-      }),
-    ]
-
-    aiSnakesRef.current = [
-      new AISnake({
-        x: 100,
-        y: 100,
-        color: "#0f0",
-        headColor: "#ff0",
-        initialLength: 3,
-        initialAngle: 0,
-        speed: 1.5,
-        behavior: "passive",
-      }),
-      new AISnake({
-        x: canvasWidth - 100,
-        y: canvasHeight - 100,
-        color: "#f00",
-        headColor: "#f80",
-        initialLength: 3,
-        initialAngle: Math.PI,
-        speed: 1.8,
-        behavior: "aggressive",
-      }),
-    ]
-
-    particleSystemsRef.current = []
-
-    // Reset power-ups
-    powerUpsRef.current = []
-
-    // Reset score
-    setScore(0)
-
-    // Start game
-    setGameState("playing")
-    gameLoopRef.current = requestAnimationFrame(gameLoop)
+    console.log('Starting new game...', { aiSnakeCount, aiDifficulty });
     
-    // Play start sound
-    audioRef.current.playSound("collect")
-  }
+    try {
+      // Reset game objects
+      playerSnakeRef.current = new Snake({
+        x: canvasWidth / 2,
+        y: canvasHeight / 2,
+        color: "#0ff",
+        headColor: "#f0f",
+        initialLength: 5,
+        initialAngle: Math.PI / 2,
+        speed: 2,
+      });
+
+      // Clear existing food
+      foodRef.current = [];
+      
+      // Spawn initial food
+      for (let i = 0; i < 3; i++) {
+        spawnFood();
+      }
+      console.log('Initial food spawned:', foodRef.current);
+
+      // Initialize canvas dimensions
+      const canvas = canvasRef.current;
+      if (canvas) {
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        console.log('Canvas dimensions set:', { width: canvasWidth, height: canvasHeight });
+      }
+
+      // Initialize AI snakes with individual settings
+      aiSnakesRef.current = aiSnakes.map(({ behavior, color }) => {
+        const speed = {
+          easy: 1.2,
+          medium: 1.5,
+          hard: 1.8
+        }[aiDifficulty];
+
+        return new AISnake({
+          x: Math.random() * canvasWidth,
+          y: Math.random() * canvasHeight,
+          color: color,
+          headColor: "#fff",
+          initialLength: 3,
+          initialAngle: Math.random() * Math.PI * 2,
+          speed: speed + (Math.random() * 0.3),
+          behavior: behavior,
+        });
+      });
+      console.log('AI snakes created:', aiSnakesRef.current);
+
+      particleSystemsRef.current = [];
+      powerUpsRef.current = [];
+
+      // Reset score
+      setScore(0);
+
+      // Start game
+      console.log('Setting game state to playing');
+      setGameState("playing");
+      
+      // Add a small delay to ensure state is updated before starting game loop
+      setTimeout(() => {
+        console.log('Starting game loop');
+        if (canvasRef.current) {
+          gameLoopRef.current = requestAnimationFrame(gameLoop);
+        }
+      }, 0);
+      
+      // Play start sound
+      audioRef.current.playSound("collect");
+      console.log('Game started successfully');
+    } catch (error) {
+      console.error('Error in startGame:', error);
+    }
+  };
 
   // Main game loop
   const gameLoop = () => {
-    if (gameState !== "playing") return
-    
-    const canvas = canvasRef.current
-    if (!canvas) return
-    
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
+    try {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return;
 
-    // Split into core systems
-    renderSystem(ctx)
-    inputSystem()
-    physicsSystem(canvas.width, canvas.height)
-    collisionSystem()
-    aiSystem(ctx)
-    particleSystem(ctx)
-    hudSystem(ctx)
+      if (gameState === "playing") {
+        // Check if we need to spawn more food
+        if (foodRef.current.length < MIN_FOOD_COUNT) {
+          console.log('Food count low, spawning more food...');
+          spawnFood();
+        }
 
-    // Continue game loop
-    gameLoopRef.current = requestAnimationFrame(gameLoop)
+        console.log('Game loop cycle');
+        
+        // Handle input first
+        inputSystem();
+        
+        // Then update physics with the new input
+        physicsSystem(canvas.width, canvas.height);
+        
+        // Then render and other systems
+        renderSystem(ctx);
+        collisionSystem(ctx);
+        aiSystem(ctx);
+        particleSystem(ctx);
+        hudSystem(ctx);
+        
+        gameLoopRef.current = requestAnimationFrame(gameLoop);
+      }
+    } catch (error) {
+      console.error('Error in game loop:', error);
+    }
   }
 
   // 1. Rendering System
   const renderSystem = (ctx: CanvasRenderingContext2D) => {
-    // Clear and prepare canvas
-    ctx.fillStyle = "#000"
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight)
-    drawGrid(ctx)
+    // Clear canvas
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    
+    // Draw grid
+    drawGrid(ctx);
 
     // Draw game entities
     if (playerSnakeRef.current) {
-      playerSnakeRef.current.draw(ctx)
+      playerSnakeRef.current.draw(ctx);
+    }
+
+    // Draw AI snakes
+    for (const aiSnake of aiSnakesRef.current) {
+      aiSnake.draw(ctx);
     }
     
     // Draw food
     for (const food of foodRef.current) {
-      food.update()
-      food.draw(ctx)
+      food.update();
+      food.draw(ctx);
     }
 
     // Draw power-ups
     for (const powerUp of powerUpsRef.current) {
-      powerUp.update()
-      powerUp.draw(ctx)
+      powerUp.update();
+      powerUp.draw(ctx);
     }
-  }
 
-  // 2. Input System
-  const inputSystem = () => {
-    if (!playerSnakeRef.current) return
+    // Draw particles
+    for (const particles of particleSystemsRef.current) {
+      particles.draw(ctx);
+    }
 
-    if (isMobile) {
-      // Convert touch direction to angle
-      if (touchDirection.x !== 0 || touchDirection.y !== 0) {
-        const targetAngle = Math.atan2(touchDirection.y, touchDirection.x);
-        const currentAngle = playerSnakeRef.current.angle;
-        
-        // Smooth rotation towards target angle
-        const angleDiff = targetAngle - currentAngle;
-        const normalizedDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
-        
-        if (normalizedDiff > 0.1) {
-          playerSnakeRef.current.turnRight();
-        } else if (normalizedDiff < -0.1) {
-          playerSnakeRef.current.turnLeft();
-        }
-      }
-
-      // Handle boost
-      if (isBoosting) {
-        playerSnakeRef.current.boost();
-      } else {
-        playerSnakeRef.current.normalSpeed();
-      }
-    } else {
-      // Existing keyboard controls
-      handleInput();
+    // Draw remains
+    for (const remains of remainsRef.current) {
+      remains.update();
+      remains.draw(ctx);
     }
   }
 
   // 3. Physics System
   const physicsSystem = (width: number, height: number) => {
+    // Update player snake
     if (playerSnakeRef.current) {
-      playerSnakeRef.current.update(width, height)
+      playerSnakeRef.current.update(width, height);
     }
 
-    // Update AI snake positions
+    // Update AI snakes
     for (const aiSnake of aiSnakesRef.current) {
-      aiSnake.update(width, height)
+      aiSnake.update(width, height);
     }
+
+    // Update food animations
+    for (const food of foodRef.current) {
+      food.update();
+    }
+
+    // Update power-ups
+    for (const powerUp of powerUpsRef.current) {
+      powerUp.update();
+    }
+
+    // Update particles
+    particleSystemsRef.current = particleSystemsRef.current.filter((system) => {
+      system.update();
+      return !system.isDead();
+    });
   }
 
   // 4. Collision System
-  const collisionSystem = () => {
-    checkFoodCollisions(ctx)
+  const collisionSystem = (ctx: CanvasRenderingContext2D) => {
+    checkFoodCollisions()
     checkSnakeCollisions()
     checkPowerUpCollisions()
   }
@@ -314,143 +391,259 @@ export default function SnakeGame() {
 
   // Draw grid lines for futuristic effect
   const drawGrid = (ctx: CanvasRenderingContext2D) => {
-    ctx.strokeStyle = "rgba(0, 255, 255, 0.1)"
-    ctx.lineWidth = 1
+    ctx.strokeStyle = "rgba(0, 255, 255, 0.1)";
+    ctx.lineWidth = 1;
 
     // Vertical lines
     for (let x = 0; x <= canvasWidth; x += 40) {
-      ctx.beginPath()
-      ctx.moveTo(x, 0)
-      ctx.lineTo(x, canvasHeight)
-      ctx.stroke()
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvasHeight);
+      ctx.stroke();
     }
 
     // Horizontal lines
     for (let y = 0; y <= canvasHeight; y += 40) {
-      ctx.beginPath()
-      ctx.moveTo(0, y)
-      ctx.lineTo(canvasWidth, y)
-      ctx.stroke()
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvasWidth, y);
+      ctx.stroke();
     }
   }
 
-  // Handle player input
-  const handleInput = () => {
-    if (!playerSnakeRef.current) return
+  // Update the inputSystem function
+  const inputSystem = () => {
+    if (!playerSnakeRef.current) return;
 
-    // Turn left with left arrow or A
-    if (keysPressed.current.has("arrowleft") || keysPressed.current.has("a")) {
-      playerSnakeRef.current.turnLeft()
+    // Debug current key state
+    const currentKeys = Array.from(keysPressed.current);
+    console.log('Input state:', {
+      keys: currentKeys,
+      left: keysPressed.current.has('a') || keysPressed.current.has('arrowleft'),
+      right: keysPressed.current.has('d') || keysPressed.current.has('arrowright'),
+      boost: keysPressed.current.has('w') || keysPressed.current.has('arrowup')
+    });
+
+    // Stop automatic movement
+    let movementMade = false;
+
+    // Handle keyboard controls
+    if (keysPressed.current.has('a') || keysPressed.current.has('arrowleft')) {
+      playerSnakeRef.current.turnLeft();
+      movementMade = true;
     }
-
-    // Turn right with right arrow or D
-    if (keysPressed.current.has("arrowright") || keysPressed.current.has("d")) {
-      playerSnakeRef.current.turnRight()
+    if (keysPressed.current.has('d') || keysPressed.current.has('arrowright')) {
+      playerSnakeRef.current.turnRight();
+      movementMade = true;
     }
-
-    // Speed boost with up arrow or W
-    if (keysPressed.current.has("arrowup") || keysPressed.current.has("w")) {
-      playerSnakeRef.current.boost()
+    if (keysPressed.current.has('w') || keysPressed.current.has('arrowup')) {
+      playerSnakeRef.current.boost();
+      movementMade = true;
     } else {
-      playerSnakeRef.current.normalSpeed()
+      playerSnakeRef.current.normalSpeed();
     }
-  }
+
+    // If no movement keys are pressed, maintain current direction
+    if (!movementMade) {
+      playerSnakeRef.current.normalSpeed();
+    }
+  };
 
   // Check for food collisions
-  const checkFoodCollisions = (ctx: CanvasRenderingContext2D) => {
-    if (!playerSnakeRef.current) return
+  const checkFoodCollisions = () => {
+    if (!playerSnakeRef.current) return;
 
-    const playerHead = playerSnakeRef.current.getHead()
-
+    const playerHead = playerSnakeRef.current.getHead();
+    const initialFoodCount = foodRef.current.length;
+    
     foodRef.current = foodRef.current.filter((food) => {
-      const distance = Math.hypot(playerHead.x - food.position.x, playerHead.y - food.position.y)
+      const distance = Math.hypot(
+        playerHead.x - food.position.x,
+        playerHead.y - food.position.y
+      );
 
-      if (distance < playerHead.radius + food.radius) {
+      const collisionDistance = playerHead.radius + food.radius;
+      
+      if (distance < collisionDistance) {
+        console.log('Food collision detected!', {
+          distance,
+          collisionDistance,
+          foodPosition: food.position,
+          playerPosition: { x: playerHead.x, y: playerHead.y }
+        });
+
         // Create particle effect
         particleSystemsRef.current.push(
           new ParticleSystem({
             x: food.position.x,
             y: food.position.y,
             color: food.color,
-            particleCount: 20,
-            lifetime: 30,
-          }),
-        )
+            particleCount: 15,
+            lifetime: 25,
+          })
+        );
 
         // Grow snake
-        playerSnakeRef.current?.grow(food.value)
+        playerSnakeRef.current?.grow(food.value);
+        
+        // Play sound
+        audioRef.current.playSound("collect");
 
-        // Increase score
+        // Update score
         setScore((prevScore) => {
-          const newScore = prevScore + food.value * 10
-
-          // Update high score if needed
+          const newScore = prevScore + (food.type === 'special' ? 30 : 10);
           if (newScore > highScore) {
-            setHighScore(newScore)
-            localStorage.setItem("snakeHighScore", newScore.toString())
+            setHighScore(newScore);
+            localStorage.setItem("snakeHighScore", newScore.toString());
           }
-
-          return newScore
-        })
+          return newScore;
+        });
 
         // Spawn new food
-        spawnFood()
+        spawnFood();
 
-        return false
+        return false; // Remove this food
       }
+      return true; // Keep this food
+    });
 
-      return true
-    })
-  }
+    // Check remains collisions
+    remainsRef.current = remainsRef.current.filter((remains) => {
+      const distance = Math.hypot(
+        playerHead.x - remains.position.x,
+        playerHead.y - remains.position.y
+      );
+
+      if (distance < playerHead.radius + remains.radius) {
+        // Create special particle effect
+        particleSystemsRef.current.push(
+          new ParticleSystem({
+            x: remains.position.x,
+            y: remains.position.y,
+            color: remains.color,
+            particleCount: 30,
+            lifetime: 40,
+            speed: 2,
+          })
+        );
+
+        // Add score
+        setScore((prevScore) => {
+          const newScore = prevScore + remains.scoreValue;
+          if (newScore > highScore) {
+            setHighScore(newScore);
+            localStorage.setItem("snakeHighScore", newScore.toString());
+          }
+          return newScore;
+        });
+
+        // Grow snake proportionally to the score
+        playerSnakeRef.current?.grow(Math.ceil(remains.scoreValue / 20));
+        
+        // Play special sound
+        audioRef.current.playSound("collect");
+
+        return false; // Remove remains
+      }
+      return true; // Keep remains
+    });
+
+    const finalFoodCount = foodRef.current.length;
+    if (initialFoodCount !== finalFoodCount) {
+      console.log('Food count changed:', { 
+        before: initialFoodCount, 
+        after: finalFoodCount 
+      });
+    }
+  };
 
   // Check for snake collisions
   const checkSnakeCollisions = () => {
-    if (!playerSnakeRef.current) return
+    if (!playerSnakeRef.current) return;
 
-    const playerHead = playerSnakeRef.current.getHead()
+    const playerHead = playerSnakeRef.current.getHead();
 
     // Check collision with player's own body
     if (playerSnakeRef.current.checkSelfCollision()) {
-      gameOver()
-      return
+      gameOver();
+      return;
     }
 
     // Check collision with AI snakes
     for (const aiSnake of aiSnakesRef.current) {
+      // Player collision with AI snake
       if (aiSnake.checkCollisionWith(playerHead)) {
-        gameOver()
-        return
+        gameOver();
+        return;
       }
 
-      // Check if AI snake head collides with player body
-      const aiHead = aiSnake.getHead()
+      // AI snake head collision with player body
+      const aiHead = aiSnake.getHead();
       if (playerSnakeRef.current.checkCollisionWithPoint(aiHead)) {
-        // Create particle effect
-        particleSystemsRef.current.push(
-          new ParticleSystem({
-            x: aiHead.x,
-            y: aiHead.y,
-            color: aiSnake.color,
-            particleCount: 30,
-            lifetime: 40,
-          }),
-        )
+        createSnakeExplosion(aiSnake);
+        removeAndRespawnAISnake(aiSnake);
+        continue;
+      }
 
-        // Remove AI snake
-        aiSnakesRef.current = aiSnakesRef.current.filter((snake) => snake !== aiSnake)
+      // NEW: Check AI snake collisions with other AI snakes
+      for (const otherAI of aiSnakesRef.current) {
+        if (aiSnake === otherAI) continue; // Skip self
 
-        // Increase score
-        setScore((prevScore) => prevScore + 50)
+        // Check if this AI snake's head hits other AI snake's body
+        if (otherAI.checkCollisionWith(aiHead)) {
+          console.log('AI snake collision detected');
+          createSnakeExplosion(aiSnake);
+          removeAndRespawnAISnake(aiSnake);
+          break;
+        }
 
-        // Spawn new AI snake after delay
-        setTimeout(() => {
-          if (gameState === "playing") {
-            spawnAISnake()
-          }
-        }, 5000)
+        // Check if other AI snake's head hits this AI snake's body
+        const otherHead = otherAI.getHead();
+        if (aiSnake.checkCollisionWith(otherHead)) {
+          console.log('AI snake collision detected');
+          createSnakeExplosion(otherAI);
+          removeAndRespawnAISnake(otherAI);
+          break;
+        }
       }
     }
-  }
+  };
+
+  // Helper function to create explosion effect
+  const createSnakeExplosion = (snake: AISnake) => {
+    particleSystemsRef.current.push(
+      new ParticleSystem({
+        x: snake.getHead().x,
+        y: snake.getHead().y,
+        color: snake.color,
+        particleCount: 30,
+        lifetime: 40,
+      })
+    );
+  };
+
+  // Helper function to remove and respawn AI snake
+  const removeAndRespawnAISnake = (snake: AISnake) => {
+    // Create remains at snake's head position
+    const head = snake.getHead();
+    const remains = new SnakeRemains({
+      x: head.x,
+      y: head.y,
+      color: snake.color,
+      scoreValue: snake.getScore(),
+    });
+    remainsRef.current.push(remains);
+
+    // Remove the snake
+    aiSnakesRef.current = aiSnakesRef.current.filter((s) => s !== snake);
+
+    // Spawn new AI snake after delay
+    setTimeout(() => {
+      if (gameState === "playing") {
+        spawnAISnake();
+      }
+    }, 5000);
+  };
 
   // Update and draw AI snakes
   const updateAISnakes = (ctx: CanvasRenderingContext2D) => {
@@ -460,21 +653,21 @@ export default function SnakeGame() {
         foodRef.current,
         playerSnakeRef.current,
         aiSnakesRef.current.filter((snake) => snake !== aiSnake),
+        powerUpsRef.current,
         canvasWidth,
-        canvasHeight,
-      )
+        canvasHeight
+      );
 
       // Update position
-      aiSnake.update(canvasWidth, canvasHeight)
-
-      // Draw snake
-      aiSnake.draw(ctx)
+      aiSnake.update(canvasWidth, canvasHeight);
 
       // Check for food collision
-      const aiHead = aiSnake.getHead()
-
+      const aiHead = aiSnake.getHead();
       foodRef.current = foodRef.current.filter((food) => {
-        const distance = Math.hypot(aiHead.x - food.position.x, aiHead.y - food.position.y)
+        const distance = Math.hypot(
+          aiHead.x - food.position.x,
+          aiHead.y - food.position.y
+        );
 
         if (distance < aiHead.radius + food.radius) {
           // Create particle effect
@@ -485,73 +678,106 @@ export default function SnakeGame() {
               color: food.color,
               particleCount: 15,
               lifetime: 25,
-            }),
-          )
+            })
+          );
 
           // Grow snake
-          aiSnake.grow(food.value)
+          aiSnake.grow(food.value);
 
           // Spawn new food
-          spawnFood()
+          spawnFood();
 
-          return false
+          return false; // Remove this food
         }
+        return true; // Keep this food
+      });
 
-        return true
-      })
+      // Check for power-up collisions
+      powerUpsRef.current = powerUpsRef.current.filter((powerUp) => {
+        const distance = Math.hypot(
+          aiHead.x - powerUp.position.x,
+          aiHead.y - powerUp.position.y
+        );
+
+        if (distance < aiHead.radius + powerUp.radius) {
+          // Apply power-up effect
+          powerUp.applyEffect(aiSnake);
+
+          // Create particle effect
+          particleSystemsRef.current.push(
+            new ParticleSystem({
+              x: powerUp.position.x,
+              y: powerUp.position.y,
+              color: powerUp.color,
+              particleCount: 30,
+              lifetime: 40,
+            })
+          );
+
+          // Play sound
+          audioRef.current.playSound("powerup");
+
+          return false; // Remove this power-up
+        }
+        return true; // Keep this power-up
+      });
+
+      // Draw snake
+      aiSnake.draw(ctx);
     }
-  }
+  };
 
   // Spawn new food
   const spawnFood = () => {
+    console.log('Spawning new food...');
+    
     // Random position away from snakes
-    let validPosition = false
-    let x, y
+    let validPosition = false;
+    let x, y;
+    let attempts = 0;
+    const maxAttempts = 10;
 
-    while (!validPosition) {
-      x = Math.random() * (canvasWidth - 40) + 20
-      y = Math.random() * (canvasHeight - 40) + 20
-
-      validPosition = true
+    while (!validPosition && attempts < maxAttempts) {
+      x = Math.random() * (canvasWidth - 40) + 20;
+      y = Math.random() * (canvasHeight - 40) + 20;
+      validPosition = true;
+      attempts++;
 
       // Check distance from player snake
       if (playerSnakeRef.current) {
-        for (const segment of playerSnakeRef.current.segments) {
-          const distance = Math.hypot(segment.x - x, segment.y - y)
-          if (distance < 50) {
-            validPosition = false
-            break
-          }
+        const distance = Math.hypot(
+          playerSnakeRef.current.getHead().x - x,
+          playerSnakeRef.current.getHead().y - y
+        );
+        if (distance < 50) {
+          validPosition = false;
+          continue;
         }
       }
 
       // Check distance from AI snakes
-      if (validPosition) {
-        for (const aiSnake of aiSnakesRef.current) {
-          for (const segment of aiSnake.segments) {
-            const distance = Math.hypot(segment.x - x, segment.y - y)
-            if (distance < 50) {
-              validPosition = false
-              break
-            }
-          }
-          if (!validPosition) break
+      for (const aiSnake of aiSnakesRef.current) {
+        const distance = Math.hypot(
+          aiSnake.getHead().x - x,
+          aiSnake.getHead().y - y
+        );
+        if (distance < 50) {
+          validPosition = false;
+          break;
         }
       }
     }
 
-    // Determine food type (10% chance for special food)
-    const foodType = Math.random() < 0.1 ? "special" : "regular"
-
     // Create new food
-    foodRef.current.push(
-      new Food({
-        x: x!,
-        y: y!,
-        type: foodType,
-      }),
-    )
-  }
+    const newFood = new Food({
+      x: x!,
+      y: y!,
+      type: Math.random() < 0.1 ? "special" : "regular",
+    });
+
+    foodRef.current.push(newFood);
+    console.log('New food spawned:', { x, y, foodCount: foodRef.current.length });
+  };
 
   // Spawn new AI snake
   const spawnAISnake = () => {
@@ -617,29 +843,29 @@ export default function SnakeGame() {
 
   // Draw HUD (score, etc.)
   const drawHUD = (ctx: CanvasRenderingContext2D) => {
-    ctx.fillStyle = "#fff"
-    ctx.font = '20px "Courier New", monospace'
-    ctx.textAlign = "left"
-    ctx.fillText(`SCORE: ${score}`, 20, 30)
-    ctx.fillText(`HIGH SCORE: ${highScore}`, 20, 60)
+    ctx.fillStyle = "#fff";
+    ctx.font = '20px "Courier New", monospace';
+    ctx.textAlign = "left";
+    ctx.fillText(`SCORE: ${score}`, 20, 30);
+    ctx.fillText(`HIGH SCORE: ${highScore}`, 20, 60);
 
     // Draw active power-ups
     if (playerSnakeRef.current) {
-      const activePowerUps = playerSnakeRef.current.activePowerUps
-      let i = 0
+      const activePowerUps = playerSnakeRef.current.activePowerUps;
+      let i = 0;
       activePowerUps.forEach((endTime, type) => {
         if (Date.now() < endTime) {
-          const timeLeft = Math.ceil((endTime - Date.now()) / 1000)
-          ctx.fillStyle = "#fff"
-          ctx.font = '16px "Courier New", monospace'
+          const timeLeft = Math.ceil((endTime - Date.now()) / 1000);
+          ctx.fillStyle = "#fff";
+          ctx.font = '16px "Courier New", monospace';
           ctx.fillText(
             `${type.toUpperCase()}: ${timeLeft}s`,
             20,
             100 + i * 25
-          )
-          i++
+          );
+          i++;
         }
-      })
+      });
     }
   }
 
@@ -665,14 +891,105 @@ export default function SnakeGame() {
     }
   }
 
-  // Render menu screen
+  // Update the renderMenu function
   const renderMenu = () => {
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-80 z-10">
         <h1 className="text-5xl font-bold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600">
           NEON SNAKE
         </h1>
-        <div className="space-y-4 w-64">
+        <div className="space-y-6 w-96"> {/* Increased width for more space */}
+          {/* AI Snake Settings */}
+          <div className="space-y-4 bg-gray-900 p-4 rounded-lg">
+            <h2 className="text-xl text-cyan-400 font-semibold text-center">Game Settings</h2>
+            
+            <div className="space-y-2">
+              <label className="text-gray-300 block">Number of AI Snakes</label>
+              <input 
+                type="range" 
+                min="0" 
+                max="4" 
+                value={aiSnakes.length}
+                onChange={(e) => {
+                  const newCount = Number(e.target.value);
+                  setAiSnakes(prev => {
+                    if (newCount > prev.length) {
+                      // Add new snakes
+                      return [...prev, ...Array(newCount - prev.length).fill(null).map(() => ({
+                        behavior: getRandomBehavior(),
+                        color: ["#0f0", "#f00", "#ff0", "#f0f"][prev.length % 4]
+                      }))];
+                    } else {
+                      // Remove snakes
+                      return prev.slice(0, newCount);
+                    }
+                  });
+                }}
+                className="w-full accent-cyan-500"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-gray-300 block">AI Difficulty</label>
+              <div className="flex gap-2">
+                {['easy', 'medium', 'hard'].map((diff) => (
+                  <button
+                    key={diff}
+                    onClick={() => setAiDifficulty(diff as 'easy' | 'medium' | 'hard')}
+                    className={`flex-1 py-1 px-2 rounded ${
+                      aiDifficulty === diff 
+                        ? 'bg-cyan-600 text-white' 
+                        : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    }`}
+                  >
+                    {diff.charAt(0).toUpperCase() + diff.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Individual Snake Settings */}
+            {aiSnakes.map((snake, index) => (
+              <div key={index} className="space-y-2 border-t border-gray-700 pt-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-gray-300">Snake {index + 1}</label>
+                  <div className="flex gap-2">
+                    {["#0f0", "#f00", "#ff0", "#f0f"].map((color) => (
+                      <button
+                        key={color}
+                        onClick={() => setAiSnakes(prev => prev.map((s, i) => 
+                          i === index ? { ...s, color } : s
+                        ))}
+                        className={`w-6 h-6 rounded-full ${
+                          snake.color === color ? 'ring-2 ring-white' : ''
+                        }`}
+                        style={{ backgroundColor: color }}
+                      />
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-1">
+                  {Object.keys(AI_BEHAVIORS).map((behavior) => (
+                    <button
+                      key={behavior}
+                      onClick={() => setAiSnakes(prev => prev.map((s, i) => 
+                        i === index ? { ...s, behavior: behavior as Exclude<AIBehaviorType, 'mixed'> } : s
+                      ))}
+                      className={`py-1 px-2 rounded text-sm ${
+                        snake.behavior === behavior 
+                          ? 'bg-cyan-600 text-white' 
+                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                      }`}
+                    >
+                      {behavior.charAt(0).toUpperCase() + behavior.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Play Button */}
           <Button
             className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
             onClick={startGame}
@@ -680,14 +997,17 @@ export default function SnakeGame() {
             <Play className="mr-2 h-4 w-4" />
             PLAY
           </Button>
-          <div className="text-center text-gray-400 text-sm mt-8">
+
+          {/* Controls Info */}
+          <div className="text-center text-gray-400 text-sm">
             <p>Use ARROW KEYS or WASD to control</p>
             <p>Press UP or W for speed boost</p>
+            <p>Press ESC to pause</p>
           </div>
         </div>
       </div>
-    )
-  }
+    );
+  };
 
   // Render pause screen
   const renderPauseScreen = () => {
@@ -764,67 +1084,83 @@ export default function SnakeGame() {
     )
   }
 
-  // Add power-up spawning
+  // Update power-up spawning
   const spawnPowerUp = () => {
-    const types: PowerUpType[] = ["speed", "invulnerability", "ghost"]
-    const randomType = types[Math.floor(Math.random() * types.length)]
-
-    let validPosition = false
-    let x, y
-
+    const types: PowerUpType[] = ['speed', 'invincible', 'size'];
+    const type = types[Math.floor(Math.random() * types.length)];
+    
+    // Ensure power-ups don't spawn too close to snakes
+    let validPosition = false;
+    let x, y;
+    
     while (!validPosition) {
-      x = Math.random() * (canvasWidth - 40) + 20
-      y = Math.random() * (canvasHeight - 40) + 20
-      validPosition = true
+      x = Math.random() * (canvasWidth - 40) + 20;
+      y = Math.random() * (canvasHeight - 40) + 20;
+      validPosition = true;
 
-      // Check distance from player and AI snakes
-      if (playerSnakeRef.current) {
-        for (const segment of playerSnakeRef.current.segments) {
-          const distance = Math.hypot(segment.x - x, segment.y - y)
-          if (distance < 50) {
-            validPosition = false
-            break
-          }
-        }
+      // Check distance from all snakes
+      const checkDistance = (snake: Snake) => {
+        const head = snake.getHead();
+        return Math.hypot(head.x - x, head.y - y) > 100;
+      };
+
+      if (playerSnakeRef.current && !checkDistance(playerSnakeRef.current)) {
+        validPosition = false;
       }
 
-      if (validPosition) {
-        for (const aiSnake of aiSnakesRef.current) {
-          for (const segment of aiSnake.segments) {
-            const distance = Math.hypot(segment.x - x, segment.y - y)
-            if (distance < 50) {
-              validPosition = false
-              break
-            }
-          }
-          if (!validPosition) break
+      for (const aiSnake of aiSnakesRef.current) {
+        if (!checkDistance(aiSnake)) {
+          validPosition = false;
+          break;
         }
       }
     }
+    
+    powerUpsRef.current.push(new PowerUp({ x, y, type }));
+  };
 
-    powerUpsRef.current.push(
-      new PowerUp({
-        x: x!,
-        y: y!,
-        type: randomType,
-      })
-    )
-  }
+  // Add periodic food spawning
+  useEffect(() => {
+    if (gameState !== "playing") return;
+
+    // Spawn food every 3-8 seconds
+    const foodSpawnInterval = setInterval(() => {
+      if (foodRef.current.length < MAX_FOOD_COUNT) {
+        console.log('Periodic food spawn triggered');
+        spawnFood();
+      }
+    }, 3000 + Math.random() * 5000);
+
+    return () => clearInterval(foodSpawnInterval);
+  }, [gameState]);
+
+  // Add periodic power-up spawning
+  useEffect(() => {
+    if (gameState !== "playing") return;
+
+    const powerUpInterval = setInterval(() => {
+      if (powerUpsRef.current.length < 2) { // Maximum 2 power-ups at once
+        spawnPowerUp();
+      }
+    }, 10000); // Spawn every 10 seconds if below limit
+
+    return () => clearInterval(powerUpInterval);
+  }, [gameState]);
 
   // Check power-up collisions
   const checkPowerUpCollisions = () => {
-    if (!playerSnakeRef.current) return
+    if (!playerSnakeRef.current) return;
 
-    const playerHead = playerSnakeRef.current.getHead()
+    const playerHead = playerSnakeRef.current.getHead();
     powerUpsRef.current = powerUpsRef.current.filter((powerUp) => {
       const distance = Math.hypot(
         playerHead.x - powerUp.position.x,
         playerHead.y - powerUp.position.y
-      )
+      );
 
       if (distance < playerHead.radius + powerUp.radius) {
         // Apply power-up effect
-        playerSnakeRef.current?.collectPowerUp(powerUp)
+        powerUp.applyEffect(playerSnakeRef.current!);
 
         // Create particle effect
         particleSystemsRef.current.push(
@@ -835,26 +1171,16 @@ export default function SnakeGame() {
             particleCount: 30,
             lifetime: 40,
           })
-        )
+        );
 
-        return false
+        // Play sound
+        audioRef.current.playSound("powerup");
+
+        return false; // Remove this power-up
       }
-      return true
-    })
-  }
-
-  // Occasionally spawn power-ups
-  useEffect(() => {
-    if (gameState !== "playing") return
-
-    const powerUpInterval = setInterval(() => {
-      if (Math.random() < 0.3 && powerUpsRef.current.length < 3) {
-        spawnPowerUp()
-      }
-    }, 10000) // Every 10 seconds
-
-    return () => clearInterval(powerUpInterval)
-  }, [gameState])
+      return true; // Keep this power-up
+    });
+  };
 
   // Update state transitions
   const changeGameState = async (newState: GameState) => {
@@ -895,40 +1221,67 @@ export default function SnakeGame() {
     setTouchDirection(direction);
   };
 
-  // Update input system to handle both keyboard and touch
-  const inputSystem = () => {
-    if (!playerSnakeRef.current) return;
-
+  // Add this function near the top of the component
+  const getCanvasDimensions = () => {
     if (isMobile) {
-      // Convert touch direction to angle
-      if (touchDirection.x !== 0 || touchDirection.y !== 0) {
-        const targetAngle = Math.atan2(touchDirection.y, touchDirection.x);
-        const currentAngle = playerSnakeRef.current.angle;
-        
-        // Smooth rotation towards target angle
-        const angleDiff = targetAngle - currentAngle;
-        const normalizedDiff = Math.atan2(Math.sin(angleDiff), Math.cos(angleDiff));
-        
-        if (normalizedDiff > 0.1) {
-          playerSnakeRef.current.turnRight();
-        } else if (normalizedDiff < -0.1) {
-          playerSnakeRef.current.turnLeft();
-        }
-      }
-
-      // Handle boost
-      if (isBoosting) {
-        playerSnakeRef.current.boost();
-      } else {
-        playerSnakeRef.current.normalSpeed();
-      }
-    } else {
-      // Existing keyboard controls
-      handleInput();
+      return {
+        width: Math.min(window.innerWidth - 32, 600),
+        height: Math.min(window.innerHeight - 200, 800)
+      };
     }
+    return {
+      width: 800,
+      height: 600
+    };
   };
 
-  // Update render method to include touch controls
+  // Update game loop on game state change
+  useEffect(() => {
+    if (canvasRef.current) {
+      const canvas = canvasRef.current;
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+      
+      // Start game loop
+      if (gameState === "playing") {
+        gameLoopRef.current = requestAnimationFrame(gameLoop);
+      }
+    }
+    
+    return () => {
+      if (gameLoopRef.current) {
+        cancelAnimationFrame(gameLoopRef.current);
+      }
+    };
+  }, [gameState]);
+
+  // Add near the top of the component
+  useEffect(() => {
+    // Verify all required functions exist
+    const requiredFunctions = {
+      renderSystem,
+      inputSystem,
+      physicsSystem,
+      collisionSystem,
+      aiSystem,
+      particleSystem,
+      hudSystem,
+      checkFoodCollisions,
+      checkSnakeCollisions,
+      updateAISnakes,
+      updateParticles,
+      drawHUD,
+      drawGrid
+    };
+
+    Object.entries(requiredFunctions).forEach(([name, func]) => {
+      if (!func) {
+        console.error(`Missing required function: ${name}`);
+      }
+    });
+  }, []);
+
+  // Render game controls
   return (
     <div className="relative">
       {loading ? (
@@ -937,6 +1290,8 @@ export default function SnakeGame() {
         <>
           <canvas
             ref={canvasRef}
+            width={canvasWidth}
+            height={canvasHeight}
             className="border border-cyan-900 rounded-lg shadow-lg shadow-cyan-500/20"
           />
 
@@ -958,4 +1313,3 @@ export default function SnakeGame() {
     </div>
   )
 }
-
