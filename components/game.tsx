@@ -288,6 +288,12 @@ export default function SnakeGame() {
         particleSystem(ctx);
         hudSystem(ctx);
         
+        // Update and check power-ups
+        powerUpsRef.current.forEach(powerUp => {
+          powerUp.update(); // Make sure power-ups are being updated
+        });
+        checkPowerUpCollisions();
+        
         gameLoopRef.current = requestAnimationFrame(gameLoop);
       }
     } catch (error) {

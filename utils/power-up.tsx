@@ -43,15 +43,11 @@ export class PowerUp {
 
   update(): void {
     // Update pulse effect
-    this.pulseAmount += 0.05 * this.pulseDirection;
-    if (this.pulseAmount > 1) this.pulseDirection = -1;
-    if (this.pulseAmount < 0) this.pulseDirection = 1;
+    this.pulsePhase += 0.1;
+    this.radius = this.originalRadius + Math.sin(this.pulsePhase) * 2;
 
     // Update rotation
     this.rotation += 0.03;
-
-    this.pulsePhase += 0.1;
-    this.radius = this.originalRadius + Math.sin(this.pulsePhase) * 2;
   }
 
   draw(ctx: CanvasRenderingContext2D): void {
@@ -92,7 +88,6 @@ export class PowerUp {
 
   private drawShield(ctx: CanvasRenderingContext2D) {
     const size = this.radius;
-    // Draw shield shape
     ctx.arc(0, 0, size, 0, Math.PI * 2);
     ctx.moveTo(0, -size/2);
     ctx.lineTo(size/2, size/2);
@@ -102,7 +97,6 @@ export class PowerUp {
 
   private drawSizeSymbol(ctx: CanvasRenderingContext2D) {
     const size = this.radius;
-    // Draw expand arrows
     ctx.moveTo(-size/2, 0);
     ctx.lineTo(size/2, 0);
     ctx.moveTo(size/3, -size/3);

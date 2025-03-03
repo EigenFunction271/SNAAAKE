@@ -92,10 +92,10 @@ interface SnakeSegment {
       // Update visual effects
       this.glowPhase += 0.1;
 
-      // Update velocity based on current angle
+      // Use currentSpeed instead of speed for movement
       this.velocity = {
-        x: Math.cos(this.angle) * this.speed,
-        y: Math.sin(this.angle) * this.speed,
+        x: Math.cos(this.angle) * this.currentSpeed,
+        y: Math.sin(this.angle) * this.currentSpeed,
       }
   
       // Move head
@@ -308,13 +308,14 @@ interface SnakeSegment {
     applyPowerUp(type: PowerUpType, duration: number) {
       switch (type) {
         case 'speed':
-          this.currentSpeed = this.baseSpeed * 1.5;
+          this.currentSpeed = this.baseSpeed * 2.5;
           break;
         case 'invincible':
           this.isInvincible = true;
           break;
         case 'size':
           this.grow(5); // Instant size increase
+          this.isGhost = true; // Add ghost effect
           break;
       }
       this.powerUpTimers.set(type, duration);
