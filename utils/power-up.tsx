@@ -55,11 +55,18 @@ export class PowerUp {
     ctx.translate(this.position.x, this.position.y);
     ctx.rotate(this.rotation);
 
-    // Add glow effect
+    // Enhanced glow effect
     ctx.shadowColor = this.color;
-    ctx.shadowBlur = 15;
+    ctx.shadowBlur = 20;
 
-    // Draw power-up symbol based on type
+    // Draw outer ring
+    ctx.beginPath();
+    ctx.arc(0, 0, this.radius + 5, 0, Math.PI * 2);
+    ctx.strokeStyle = this.color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Draw power-up symbol
     ctx.beginPath();
     switch (this.type) {
       case 'speed':
@@ -73,30 +80,51 @@ export class PowerUp {
         break;
     }
 
-    ctx.fillStyle = this.color;
+    // Fill with semi-transparent color
+    ctx.fillStyle = `${this.color}88`; // Add transparency
     ctx.fill();
+
+    // Add text label
+    ctx.fillStyle = '#fff';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.type.toUpperCase(), 0, this.radius + 20);
+
     ctx.restore();
   }
 
   private drawLightningBolt(ctx: CanvasRenderingContext2D) {
     const size = this.radius;
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#fff';
+    
     ctx.moveTo(-size/2, -size/2);
     ctx.lineTo(0, -size/4);
     ctx.lineTo(-size/4, 0);
     ctx.lineTo(size/2, size/2);
+    ctx.stroke(); // Add white outline
   }
 
   private drawShield(ctx: CanvasRenderingContext2D) {
     const size = this.radius;
-    ctx.arc(0, 0, size, 0, Math.PI * 2);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#fff';
+    
+    // Shield shape
+    ctx.arc(0, 0, size * 0.8, 0, Math.PI * 2);
+    ctx.moveTo(-size/2, 0);
+    ctx.lineTo(size/2, 0);
     ctx.moveTo(0, -size/2);
-    ctx.lineTo(size/2, size/2);
-    ctx.lineTo(-size/2, size/2);
-    ctx.closePath();
+    ctx.lineTo(0, size/2);
+    ctx.stroke(); // Add white outline
   }
 
   private drawSizeSymbol(ctx: CanvasRenderingContext2D) {
     const size = this.radius;
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#fff';
+    
+    // Expand arrows
     ctx.moveTo(-size/2, 0);
     ctx.lineTo(size/2, 0);
     ctx.moveTo(size/3, -size/3);
@@ -105,6 +133,7 @@ export class PowerUp {
     ctx.moveTo(-size/3, -size/3);
     ctx.lineTo(-size/2, 0);
     ctx.lineTo(-size/3, size/3);
+    ctx.stroke(); // Add white outline
   }
 
   applyEffect(snake: Snake): void {

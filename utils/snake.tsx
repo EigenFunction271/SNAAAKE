@@ -335,6 +335,10 @@ interface SnakeSegment {
       }
       this.powerUpTimers.delete(type);
     }
+  
+    getActivePowerUps(): Map<PowerUpType, number> {
+      return this.powerUpTimers;
+    }
   }
   
   

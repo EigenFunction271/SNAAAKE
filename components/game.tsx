@@ -237,6 +237,12 @@ export default function SnakeGame() {
       // Reset score
       setScore(0);
 
+      // Clear existing power-ups
+      powerUpsRef.current = [];
+      
+      // Spawn initial power-up
+      spawnPowerUp();
+
       // Start game
       console.log('Setting game state to playing');
       setGameState("playing");
@@ -259,47 +265,29 @@ export default function SnakeGame() {
 
   // Main game loop
   const gameLoop = () => {
-    try {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    if (gameState === "playing") {
+      inputSystem();
+      physicsSystem();
+      collisionSystem();
+      aiSystem(ctx);
       
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-
-      if (gameState === "playing") {
-        // Check if we need to spawn more food
-        if (foodRef.current.length < MIN_FOOD_COUNT) {
-          console.log('Food count low, spawning more food...');
-          spawnFood();
-        }
-
-        console.log('Game loop cycle');
-        
-        // Handle input first
-        inputSystem();
-        
-        // Then update physics with the new input
-        physicsSystem(canvas.width, canvas.height);
-        
-        // Then render and other systems
-        renderSystem(ctx);
-        collisionSystem(ctx);
-        aiSystem(ctx);
-        particleSystem(ctx);
-        hudSystem(ctx);
-        
-        // Update and check power-ups
-        powerUpsRef.current.forEach(powerUp => {
-          powerUp.update(); // Make sure power-ups are being updated
-        });
-        checkPowerUpCollisions();
-        
-        gameLoopRef.current = requestAnimationFrame(gameLoop);
-      }
-    } catch (error) {
-      console.error('Error in game loop:', error);
+      // Update power-ups
+      powerUpsRef.current.forEach(powerUp => powerUp.update());
+      checkPowerUpCollisions();
+      
+      renderSystem(ctx);
+      particleSystem(ctx);
+      hudSystem(ctx);
     }
-  }
+    
+    gameLoopRef.current = requestAnimationFrame(gameLoop);
+  };
 
   // 1. Rendering System
   const renderSystem = (ctx: CanvasRenderingContext2D) => {
@@ -310,7 +298,16 @@ export default function SnakeGame() {
     // Draw grid
     drawGrid(ctx);
 
-    // Draw game entities
+    // Draw food
+    foodRef.current.forEach((food) => food.draw(ctx));
+
+    // Draw power-ups
+    powerUpsRef.current.forEach((powerUp) => powerUp.draw(ctx));
+
+    // Draw remains
+    remainsRef.current.forEach((remains) => remains.draw(ctx));
+
+    // Draw snakes
     if (playerSnakeRef.current) {
       playerSnakeRef.current.draw(ctx);
     }
@@ -320,40 +317,22 @@ export default function SnakeGame() {
       aiSnake.draw(ctx);
     }
     
-    // Draw food
-    for (const food of foodRef.current) {
-      food.update();
-      food.draw(ctx);
-    }
-
-    // Draw power-ups
-    for (const powerUp of powerUpsRef.current) {
-      powerUp.update();
-      powerUp.draw(ctx);
-    }
-
     // Draw particles
     for (const particles of particleSystemsRef.current) {
       particles.draw(ctx);
     }
-
-    // Draw remains
-    for (const remains of remainsRef.current) {
-      remains.update();
-      remains.draw(ctx);
-    }
   }
 
   // 3. Physics System
-  const physicsSystem = (width: number, height: number) => {
+  const physicsSystem = () => {
     // Update player snake
     if (playerSnakeRef.current) {
-      playerSnakeRef.current.update(width, height);
+      playerSnakeRef.current.update(canvasWidth, canvasHeight);
     }
 
     // Update AI snakes
     for (const aiSnake of aiSnakesRef.current) {
-      aiSnake.update(width, height);
+      aiSnake.update(canvasWidth, canvasHeight);
     }
 
     // Update food animations
@@ -374,7 +353,7 @@ export default function SnakeGame() {
   }
 
   // 4. Collision System
-  const collisionSystem = (ctx: CanvasRenderingContext2D) => {
+  const collisionSystem = () => {
     checkFoodCollisions()
     checkSnakeCollisions()
     checkPowerUpCollisions()
@@ -857,23 +836,42 @@ export default function SnakeGame() {
 
     // Draw active power-ups
     if (playerSnakeRef.current) {
-      const activePowerUps = playerSnakeRef.current.activePowerUps;
-      let i = 0;
-      activePowerUps.forEach((endTime, type) => {
-        if (Date.now() < endTime) {
-          const timeLeft = Math.ceil((endTime - Date.now()) / 1000);
-          ctx.fillStyle = "#fff";
-          ctx.font = '16px "Courier New", monospace';
-          ctx.fillText(
-            `${type.toUpperCase()}: ${timeLeft}s`,
-            20,
-            100 + i * 25
-          );
-          i++;
-        }
+      const activePowerUps = playerSnakeRef.current.getActivePowerUps();
+      let xOffset = 10;
+      const yPos = canvasHeight - 40;
+
+      activePowerUps.forEach((duration, type) => {
+        ctx.save();
+        
+        // Draw power-up icon
+        ctx.fillStyle = getPowerUpColor(type);
+        ctx.strokeStyle = '#fff';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(xOffset + 15, yPos, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Draw timer
+        const seconds = Math.ceil(duration / 60);
+        ctx.fillStyle = '#fff';
+        ctx.font = '12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${seconds}s`, xOffset + 15, yPos + 25);
+
+        xOffset += 40;
+        ctx.restore();
       });
     }
   }
+
+  const getPowerUpColor = (type: PowerUpType): string => {
+    switch (type) {
+      case 'speed': return '#ff0';
+      case 'invincible': return '#f0f';
+      case 'size': return '#0ff';
+    }
+  };
 
   // Game over
   const gameOver = () => {
@@ -1095,7 +1093,7 @@ export default function SnakeGame() {
     const types: PowerUpType[] = ['speed', 'invincible', 'size'];
     const type = types[Math.floor(Math.random() * types.length)];
     
-    // Ensure power-ups don't spawn too close to snakes
+    // Find valid spawn position
     let validPosition = false;
     let x, y;
     
@@ -1122,7 +1120,14 @@ export default function SnakeGame() {
       }
     }
     
-    powerUpsRef.current.push(new PowerUp({ x, y, type }));
+    // Create and add the power-up
+    powerUpsRef.current.push(new PowerUp({ 
+      x: x!, 
+      y: y!, 
+      type 
+    }));
+
+    console.log(`Spawned ${type} power-up at`, { x, y });
   };
 
   // Add periodic food spawning
@@ -1145,10 +1150,11 @@ export default function SnakeGame() {
     if (gameState !== "playing") return;
 
     const powerUpInterval = setInterval(() => {
-      if (powerUpsRef.current.length < 2) { // Maximum 2 power-ups at once
+      if (powerUpsRef.current.length < 2) {
+        console.log('Spawning new power-up, current count:', powerUpsRef.current.length);
         spawnPowerUp();
       }
-    }, 10000); // Spawn every 10 seconds if below limit
+    }, 10000);
 
     return () => clearInterval(powerUpInterval);
   }, [gameState]);
@@ -1168,16 +1174,21 @@ export default function SnakeGame() {
         // Apply power-up effect
         powerUp.applyEffect(playerSnakeRef.current!);
 
-        // Create particle effect
+        // Create enhanced particle effect
         particleSystemsRef.current.push(
           new ParticleSystem({
             x: powerUp.position.x,
             y: powerUp.position.y,
             color: powerUp.color,
-            particleCount: 30,
-            lifetime: 40,
+            particleCount: 50,
+            lifetime: 60,
+            speed: 3,
+            size: 4,
           })
         );
+
+        // Add text popup
+        showPopupText(powerUp.type.toUpperCase(), powerUp.position.x, powerUp.position.y, powerUp.color);
 
         // Play sound
         audioRef.current.playSound("powerup");
@@ -1186,6 +1197,38 @@ export default function SnakeGame() {
       }
       return true; // Keep this power-up
     });
+  };
+
+  // Add this new function for popup text
+  const showPopupText = (text: string, x: number, y: number, color: string) => {
+    let opacity = 1;
+    let yOffset = 0;
+    
+    const animate = () => {
+      const ctx = canvasRef.current?.getContext('2d');
+      if (!ctx || opacity <= 0) return;
+
+      ctx.save();
+      ctx.globalAlpha = opacity;
+      ctx.font = 'bold 20px Arial';
+      ctx.fillStyle = color;
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 3;
+      ctx.textAlign = 'center';
+      
+      // Draw text with outline
+      ctx.strokeText(text, x, y - yOffset);
+      ctx.fillText(text, x, y - yOffset);
+      
+      ctx.restore();
+
+      opacity -= 0.02;
+      yOffset += 1;
+
+      requestAnimationFrame(animate);
+    };
+
+    animate();
   };
 
   // Update state transitions
