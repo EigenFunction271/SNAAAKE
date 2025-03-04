@@ -88,6 +88,15 @@ export default function SnakeGame() {
   // Add this to the state declarations
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 
+  // At the top of the component, add a ref to track the current score
+  const currentScoreRef = useRef(0);
+
+  // Modify the score state to update our ref
+  useEffect(() => {
+    currentScoreRef.current = score;
+    console.log('Score state changed:', score);
+  }, [score]);
+
   // Initialize game
     useEffect(() => {
     console.log('Component mounted');
@@ -282,6 +291,7 @@ export default function SnakeGame() {
     if (!ctx) return;
 
     if (gameState === "playing") {
+      console.log('Game loop tick - Current score:', score);
       inputSystem();
       physicsSystem();
       collisionSystem();
@@ -463,14 +473,12 @@ export default function SnakeGame() {
       );
 
       if (distance < playerHead.radius + food.radius) {
-        // Update score immediately instead of using setState callback
         const scoreIncrease = food.type === 'special' ? 30 : 10;
-        setScore(score + scoreIncrease);
         
-        if (score + scoreIncrease > highScore) {
-          setHighScore(score + scoreIncrease);
-          localStorage.setItem("snakeHighScore", (score + scoreIncrease).toString());
-        }
+        setScore(prevScore => {
+          const newScore = prevScore + scoreIncrease;
+          return newScore;
+        });
 
         // Create particle effect
         particleSystemsRef.current.push(
@@ -837,65 +845,29 @@ export default function SnakeGame() {
 
   // Draw HUD (score, etc.)
   const drawHUD = (ctx: CanvasRenderingContext2D) => {
-    ctx.fillStyle = "#fff";
-    ctx.font = '20px "Courier New", monospace';
-    ctx.textAlign = "left";
-    ctx.fillText(`SCORE: ${score}`, 20, 30);
-    ctx.fillText(`HIGH SCORE: ${highScore}`, 20, 60);
+    // Save context state
+    ctx.save();
 
-    // Draw leaderboard
-    ctx.fillStyle = "rgba(0, 0, 0, 0.5)";
-    ctx.fillRect(canvasWidth - 200, 10, 180, 160);
-    ctx.strokeStyle = "#0ff";
-    ctx.strokeRect(canvasWidth - 200, 10, 180, 160);
+    // Draw score panel background
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.roundRect(10, 10, 200, 100, 5);
+    ctx.fill();
 
-    ctx.fillStyle = "#0ff";
-    ctx.font = '16px "Courier New", monospace';
-    ctx.fillText("LEADERBOARD", canvasWidth - 190, 35);
+    // Draw scores and stats
+    ctx.font = 'bold 16px Arial';
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'left';
+    
+    // Draw current score - make sure we're using the actual score value
+    ctx.fillText(`Score: ${score}`, 20, 35);
+    ctx.fillText(`High Score: ${highScore}`, 20, 60);
 
-    // Draw entries
-    ctx.font = '14px "Courier New", monospace';
-    leaderboard.slice(0, 5).forEach((entry, index) => {
-        const yPos = 60 + (index * 25);
-        // Highlight player's entry
-        if (entry.isPlayer) {
-            ctx.fillStyle = "#0f0";
-        } else {
-            ctx.fillStyle = "#fff";
-        }
-        ctx.fillText(`${index + 1}. ${entry.name}`, canvasWidth - 190, yPos);
-        ctx.fillText(`${entry.score}`, canvasWidth - 60, yPos);
-    });
+    // AI Snake info
+    const aliveAI = aiSnakesRef.current.length;
+    const totalAI = aiSnakes.length;
+    ctx.fillText(`AI Snakes: ${aliveAI}/${totalAI}`, 20, 85);
 
-    // Draw active power-ups
-    if (playerSnakeRef.current) {
-      const activePowerUps = playerSnakeRef.current.getActivePowerUps();
-      let xOffset = 10;
-      const yPos = canvasHeight - 40;
-
-      activePowerUps.forEach((duration, type) => {
-        ctx.save();
-        
-        // Draw power-up icon
-        ctx.fillStyle = getPowerUpColor(type);
-        ctx.strokeStyle = '#fff';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(xOffset + 15, yPos, 15, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        // Draw timer
-        const seconds = Math.ceil(duration / 60);
-        ctx.fillStyle = '#fff';
-        ctx.font = '12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(`${seconds}s`, xOffset + 15, yPos + 25);
-
-        xOffset += 40;
-        ctx.restore();
-      });
-    }
+    ctx.restore();
   }
 
   const getPowerUpColor = (type: PowerUpType): string => {
