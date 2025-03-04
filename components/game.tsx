@@ -61,10 +61,13 @@ export default function SnakeGame() {
 
   // Canvas dimensions
     const [dimensions, setDimensions] = useState({
-      width: Math.max(800, Math.min(window.innerWidth * 0.9, 1600)),
-      height: Math.max(600, Math.min(window.innerHeight * 0.8, 1000))
+      width: 800,  // Default size
+      height: 600
     })
 
+  // Initialize dimensions on mount
+    useEffect(() => {
+      // Only run on client side
   // Add responsive state
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [touchDirection, setTouchDirection] = useState({ x: 0, y: 0 })
