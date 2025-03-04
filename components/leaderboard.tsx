@@ -35,8 +35,10 @@ export function LeaderboardDisplay({
             <h3 className="text-cyan-400 mb-2 font-orbitron">Your Score</h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-orbitron">
               <div>
-                <div className="text-sm text-gray-400">Score</div>
-                <div className="font-mono text-xl">{currentScore.score}</div>
+                <div className="font-orbitron">
+                  <div className="text-sm text-gray-400">Score</div>
+                  <div className="text-xl">{currentScore.score}</div>
+                </div>
               </div>
               <div>
                 <div className="text-sm text-gray-400">Time</div>
@@ -64,9 +66,9 @@ export function LeaderboardDisplay({
                   : "bg-black/30"
               }`}
             >
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-2 font-orbitron">
                 <span className="text-cyan-400">{index + 1}.</span>
-                <span className="font-mono">{entry.score}</span>
+                <span>{entry.score}</span>
               </div>
               <div>{formatTime(entry.gameTime)}</div>
               <div>{entry.aiCount} AI</div>

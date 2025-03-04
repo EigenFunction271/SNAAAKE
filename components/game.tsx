@@ -1062,30 +1062,32 @@ export default function SnakeGame() {
   // Update the game over screen with the same aesthetic
   const renderGameOverScreen = () => {
     return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-80 z-10">
-        <div className="text-center space-y-6">
-          <h2 className="text-6xl font-bold font-orbitron text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-purple-600 animate-pulse drop-shadow-[0_0_15px_rgba(239,68,68,0.7)]">
-            GAME OVER
-          </h2>
-          <p className="text-4xl font-orbitron text-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.7)]">
-            SCORE: {score}
-          </p>
-          
-          <div className="space-y-4 w-80 mx-auto mt-8">
-            <Button
-              className="w-full py-6 text-lg font-orbitron bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 shadow-[0_0_15px_rgba(6,182,212,0.5)] hover:shadow-[0_0_25px_rgba(6,182,212,0.7)] transition-all duration-300 border border-cyan-400/30"
-              onClick={startGame}
-            >
-              <RefreshCw className="mr-2 h-5 w-5" />
-              PLAY AGAIN
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full py-6 text-lg font-orbitron border-cyan-500 text-cyan-400 hover:bg-cyan-950/50 shadow-[0_0_10px_rgba(6,182,212,0.3)] hover:shadow-[0_0_15px_rgba(6,182,212,0.5)] transition-all duration-300"
-              onClick={() => setGameState("menu")}
-            >
-              MAIN MENU
-            </Button>
+      <div className="fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-sm z-50">
+        <div className="max-w-lg w-full mx-auto px-4">
+          <div className="text-center space-y-8">
+            <h2 className="text-6xl font-bold font-orbitron text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-purple-600 animate-pulse drop-shadow-[0_0_15px_rgba(239,68,68,0.7)]">
+              GAME OVER
+            </h2>
+            <p className="text-4xl font-orbitron text-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.7)]">
+              SCORE: {score}
+            </p>
+            
+            <div className="space-y-4">
+              <Button
+                className="w-full max-w-md mx-auto py-6 text-lg font-orbitron bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 shadow-[0_0_15px_rgba(6,182,212,0.5)] hover:shadow-[0_0_25px_rgba(6,182,212,0.7)] transition-all duration-300 border border-cyan-400/30"
+                onClick={startGame}
+              >
+                <RefreshCw className="mr-2 h-5 w-5" />
+                PLAY AGAIN
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full max-w-md mx-auto py-6 text-lg font-orbitron border-cyan-500 text-cyan-400 hover:bg-cyan-950/50 shadow-[0_0_10px_rgba(6,182,212,0.3)] hover:shadow-[0_0_15px_rgba(6,182,212,0.5)] transition-all duration-300"
+                onClick={() => setGameState("menu")}
+              >
+                MAIN MENU
+              </Button>
+            </div>
           </div>
         </div>
       </div>
