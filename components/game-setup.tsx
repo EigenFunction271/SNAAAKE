@@ -42,7 +42,7 @@ export function GameSetup({ onStart }: GameSetupProps) {
     <div className="w-full max-w-4xl p-6 space-y-8">
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600">
-          NEON SNAKE
+          Snapdragon
         </h1>
         <p className="text-cyan-400">Configure your game</p>
       </div>
