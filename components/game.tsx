@@ -17,6 +17,7 @@ import { TouchControls } from "@/components/touch-controls"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { type AIBehaviorType, AI_BEHAVIORS, getRandomBehavior } from "@/utils/ai-behaviors"
 import { SnakeRemains } from "@/utils/snake-remains"
+import { GameSetup } from "@/components/game-setup"
 
 // Game states
 type GameState = "menu" | "playing" | "paused" | "gameOver"
@@ -1013,148 +1014,20 @@ export default function SnakeGame() {
   // Update the renderMenu function
   const renderMenu = () => {
     return (
-      <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-80 z-10">
-        <h1 className="text-6xl font-bold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600 animate-pulse drop-shadow-[0_0_15px_rgba(6,182,212,0.7)]">
-          NEON SNAKE
-        </h1>
-        <div className="space-y-6 w-96 max-w-full">
-          {/* AI Snake Settings */}
-          <div className="space-y-4 bg-gray-900/70 p-6 rounded-lg border border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.3)]">
-            <h2 className="text-2xl text-cyan-400 font-semibold text-center mb-4 drop-shadow-[0_0_8px_rgba(6,182,212,0.7)]">
-              Game Settings
-            </h2>
-
-            <div className="space-y-2">
-              <label className="text-gray-300 block">Number of AI Snakes</label>
-              <div className="relative">
-                <input
-                  type="range"
-                  min="0"
-                  max="4"
-                  value={aiSnakes.length}
-                  onChange={(e) => {
-                    const newCount = Number(e.target.value)
-                    setAiSnakes((prev) => {
-                      if (newCount > prev.length) {
-                        // Add new snakes
-                        return [
-                          ...prev,
-                          ...Array(newCount - prev.length)
-                            .fill(null)
-                            .map(() => ({
-                              behavior: getRandomBehavior(),
-                              color: ["#0f0", "#f00", "#ff0", "#f0f"][prev.length % 4],
-                            })),
-                        ]
-                      } else {
-                        // Remove snakes
-                        return prev.slice(0, newCount)
-                      }
-                    })
-                  }}
-                  className="w-full appearance-none h-2 bg-gray-700 rounded-full overflow-hidden"
-                  style={{
-                    background: "linear-gradient(90deg, rgba(6,182,212,0.8) 0%, rgba(147,51,234,0.8) 100%)",
-                    boxShadow: "0 0 10px rgba(6,182,212,0.5)",
-                  }}
-                />
-                <div className="flex justify-between text-xs text-gray-400 mt-1">
-                  <span>0</span>
-                  <span>1</span>
-                  <span>2</span>
-                  <span>3</span>
-                  <span>4</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-gray-300 block">AI Difficulty</label>
-              <div className="flex gap-2">
-                {["easy", "medium", "hard"].map((diff) => (
-                  <button
-                    key={diff}
-                    onClick={() => setAiDifficulty(diff as "easy" | "medium" | "hard")}
-                    className={`flex-1 py-2 px-3 rounded-md transition-all duration-300 ${
-                      aiDifficulty === diff
-                        ? "bg-gradient-to-r from-cyan-600 to-cyan-500 text-white shadow-[0_0_10px_rgba(6,182,212,0.7)]"
-                        : "bg-gray-800 text-gray-300 hover:bg-gray-700 hover:shadow-[0_0_5px_rgba(6,182,212,0.3)]"
-                    }`}
-                  >
-                    {diff.charAt(0).toUpperCase() + diff.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Individual Snake Settings */}
-            {aiSnakes.map((snake, index) => (
-              <div key={index} className="space-y-2 border-t border-gray-700 pt-4">
-                <div className="flex items-center justify-between">
-                  <label className="text-gray-300">Snake {index + 1}</label>
-                  <div className="flex gap-2">
-                    {["#0f0", "#f00", "#ff0", "#f0f"].map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setAiSnakes((prev) => prev.map((s, i) => (i === index ? { ...s, color } : s)))}
-                        className={`w-6 h-6 rounded-full transition-transform duration-200 hover:scale-110 ${
-                          snake.color === color ? "ring-2 ring-white shadow-[0_0_8px_rgba(255,255,255,0.7)]" : ""
-                        }`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
-                </div>
-                <div className="grid grid-cols-3 gap-1">
-                  {Object.keys(AI_BEHAVIORS).map((behavior) => (
-                    <button
-                      key={behavior}
-                      onClick={() =>
-                        setAiSnakes((prev) =>
-                          prev.map((s, i) =>
-                            i === index ? { ...s, behavior: behavior as Exclude<AIBehaviorType, "mixed"> } : s,
-                          ),
-                        )
-                      }
-                      className={`py-1 px-2 rounded text-sm transition-all duration-300 ${
-                        snake.behavior === behavior
-                          ? "bg-gradient-to-r from-cyan-600 to-purple-600 text-white shadow-[0_0_8px_rgba(6,182,212,0.5)]"
-                          : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-                      }`}
-                    >
-                      {behavior.charAt(0).toUpperCase() + behavior.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Play Button */}
-          <Button
-            className="w-full py-6 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-lg font-bold tracking-wider shadow-[0_0_20px_rgba(6,182,212,0.5)] hover:shadow-[0_0_30px_rgba(6,182,212,0.7)] transition-all duration-300 border border-cyan-400/30"
-            onClick={startGame}
-          >
-            <Play className="mr-2 h-5 w-5" />
-            PLAY
-          </Button>
-
-          {/* Controls Info */}
-          <div className="text-center text-gray-400 text-sm bg-gray-900/50 p-4 rounded-lg border border-gray-800">
-            <p className="mb-1">
-              Use <span className="text-cyan-400">ARROW KEYS</span> or <span className="text-cyan-400">WASD</span> to
-              control
-            </p>
-            <p className="mb-1">
-              Press <span className="text-cyan-400">UP</span> or <span className="text-cyan-400">W</span> for speed
-              boost
-            </p>
-            <p>
-              Press <span className="text-cyan-400">ESC</span> to pause
-            </p>
-          </div>
-        </div>
-      </div>
+      <GameSetup
+        onStart={(config) => {
+          // Update AI settings based on config
+          setAiSnakeCount(config.aiCount)
+          setAiSnakes(
+            config.aiBehaviors.map((behavior) => ({
+              behavior: behavior as Exclude<AIBehaviorType, "mixed">,
+              color: AI_BEHAVIORS[behavior].color,
+            }))
+          )
+          // Start the game
+          startGame()
+        }}
+      />
     )
   }
 
