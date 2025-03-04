@@ -23,7 +23,7 @@ type GameState = "menu" | "playing" | "paused" | "gameOver"
 
 // Add these constants near the top of the component
 const MIN_FOOD_COUNT = 3;
-const MAX_FOOD_COUNT = 6;
+const MAX_FOOD_COUNT = 10;
 
 // Add this constant at the top of the file with other constants
 const BEHAVIOR_OPTIONS: AIBehaviorType[] = ['passive', 'aggressive', 'territorial', 'mixed'];
@@ -292,6 +292,7 @@ export default function SnakeGame() {
       powerUpsRef.current.forEach(powerUp => powerUp.update());
       checkPowerUpCollisions();
       
+      updateRemains();
       renderSystem(ctx);
       particleSystem(ctx);
       hudSystem(ctx);
@@ -309,14 +310,17 @@ export default function SnakeGame() {
     // Draw grid
     drawGrid(ctx);
     
+    // Draw remains before snakes
+    remainsRef.current.forEach(remains => {
+      remains.update();  // Update animation
+      remains.draw(ctx);
+    });
+
     // Draw food
     foodRef.current.forEach((food) => food.draw(ctx));
 
     // Draw power-ups
     powerUpsRef.current.forEach((powerUp) => powerUp.draw(ctx));
-
-    // Draw remains
-    remainsRef.current.forEach((remains) => remains.draw(ctx));
 
     // Draw snakes
     if (playerSnakeRef.current) {
@@ -459,17 +463,15 @@ export default function SnakeGame() {
       );
 
       if (distance < playerHead.radius + food.radius) {
-        // Update score based on food type
-        setScore((prevScore) => {
-          const newScore = prevScore + (food.type === 'special' ? 30 : 10);
-          // Update high score if needed
-          if (newScore > highScore) {
-            setHighScore(newScore);
-            localStorage.setItem("snakeHighScore", newScore.toString());
-          }
-          return newScore;
-        });
+        // Update score immediately instead of using setState callback
+        const scoreIncrease = food.type === 'special' ? 30 : 10;
+        setScore(score + scoreIncrease);
         
+        if (score + scoreIncrease > highScore) {
+          setHighScore(score + scoreIncrease);
+          localStorage.setItem("snakeHighScore", (score + scoreIncrease).toString());
+        }
+
         // Create particle effect
         particleSystemsRef.current.push(
           new ParticleSystem({
@@ -625,9 +627,9 @@ export default function SnakeGame() {
     // Remove the snake
     aiSnakesRef.current = aiSnakesRef.current.filter((s) => s !== snake);
 
-        // Spawn new AI snake after delay
-        setTimeout(() => {
-          if (gameState === "playing") {
+    // Spawn new AI snake after delay
+    setTimeout(() => {
+      if (gameState === "playing") {
         spawnAISnake();
       }
     }, 5000);
@@ -717,54 +719,58 @@ export default function SnakeGame() {
 
   // Spawn new food
   const spawnFood = () => {
-    console.log('Spawning new food...');
+    // Spawn 2-4 food items at once
+    const foodCount = 2 + Math.floor(Math.random() * 3);
     
-    // Random position away from snakes
-    let validPosition = false;
-    let x, y;
-    let attempts = 0;
-    const maxAttempts = 10;
+    for (let i = 0; i < foodCount; i++) {
+      if (foodRef.current.length >= MAX_FOOD_COUNT) break;
+      
+      // Random position away from snakes
+      let validPosition = false;
+      let x, y;
+      let attempts = 0;
+      const maxAttempts = 10;
 
-    while (!validPosition && attempts < maxAttempts) {
-      x = Math.random() * (canvasWidth - 40) + 20;
-      y = Math.random() * (canvasHeight - 40) + 20;
-      validPosition = true;
-      attempts++;
+      while (!validPosition && attempts < maxAttempts) {
+        x = Math.random() * (canvasWidth - 40) + 20;
+        y = Math.random() * (canvasHeight - 40) + 20;
+        validPosition = true;
+        attempts++;
 
-      // Check distance from player snake
-      if (playerSnakeRef.current) {
-        const distance = Math.hypot(
-          playerSnakeRef.current.getHead().x - x,
-          playerSnakeRef.current.getHead().y - y
-        );
-          if (distance < 50) {
-          validPosition = false;
-          continue;
-        }
-      }
-
-      // Check distance from AI snakes
-        for (const aiSnake of aiSnakesRef.current) {
-        const distance = Math.hypot(
-          aiSnake.getHead().x - x,
-          aiSnake.getHead().y - y
-        );
+        // Check distance from player snake
+        if (playerSnakeRef.current) {
+          const distance = Math.hypot(
+            playerSnakeRef.current.getHead().x - x,
+            playerSnakeRef.current.getHead().y - y
+          );
             if (distance < 50) {
-          validPosition = false;
-          break;
+            validPosition = false;
+            continue;
+          }
+        }
+
+        // Check distance from AI snakes
+          for (const aiSnake of aiSnakesRef.current) {
+          const distance = Math.hypot(
+            aiSnake.getHead().x - x,
+            aiSnake.getHead().y - y
+          );
+              if (distance < 50) {
+            validPosition = false;
+            break;
+          }
         }
       }
-    }
 
-    // Create new food
-    const newFood = new Food({
+      // Create new food
+      const newFood = new Food({
         x: x!,
         y: y!,
-      type: Math.random() < 0.1 ? "special" : "regular",
-    });
+        type: Math.random() < 0.1 ? "special" : "regular",
+      });
 
-    foodRef.current.push(newFood);
-    console.log('New food spawned:', { x, y, foodCount: foodRef.current.length });
+      foodRef.current.push(newFood);
+    }
   };
 
   // Spawn new AI snake
@@ -1157,17 +1163,16 @@ export default function SnakeGame() {
     console.log(`Spawned ${type} power-up at`, { x, y });
   };
 
-  // Add periodic food spawning
+  // Update periodic food spawning
   useEffect(() => {
     if (gameState !== "playing") return;
 
-    // Spawn food every 3-8 seconds
+    // Change from 3-8 seconds to 1-3 seconds
     const foodSpawnInterval = setInterval(() => {
       if (foodRef.current.length < MAX_FOOD_COUNT) {
-        console.log('Periodic food spawn triggered');
         spawnFood();
       }
-    }, 3000 + Math.random() * 5000);
+    }, 1000 + Math.random() * 2000);  // Changed from 3000 + Math.random() * 5000
 
     return () => clearInterval(foodSpawnInterval);
   }, [gameState]);
@@ -1373,6 +1378,14 @@ export default function SnakeGame() {
     // Sort by score descending
     entries.sort((a, b) => b.score - a.score);
     setLeaderboard(entries);
+  };
+
+  // Add this to your game loop or update system
+  const updateRemains = () => {
+    remainsRef.current = remainsRef.current.filter(remains => {
+      remains.update();
+      return !remains.isExpired();
+    });
   };
 
   // Render game controls

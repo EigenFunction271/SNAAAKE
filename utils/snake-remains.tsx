@@ -4,6 +4,7 @@ export class SnakeRemains extends Food {
   private pulsePhase: number = 0;
   private originalRadius: number;
   public scoreValue: number;
+  private lifetime: number = 600; // 10 seconds at 60fps
 
   constructor(options: {
     x: number;
@@ -18,7 +19,7 @@ export class SnakeRemains extends Food {
     });
 
     this.color = options.color;
-    this.radius = 20; // Larger than normal food
+    this.radius = 20;
     this.originalRadius = this.radius;
     this.scoreValue = options.scoreValue;
   }
@@ -27,11 +28,20 @@ export class SnakeRemains extends Food {
     // Pulsing animation
     this.pulsePhase += 0.1;
     this.radius = this.originalRadius + Math.sin(this.pulsePhase) * 3;
+    
+    // Decrease lifetime
+    this.lifetime--;
+    
+    return this.lifetime > 0; // Return false when expired
   }
 
   draw(ctx: CanvasRenderingContext2D) {
-    // Glow effect
+    const alpha = Math.min(1, this.lifetime / 60); // Fade out in last second
+    
     ctx.save();
+    ctx.globalAlpha = alpha;
+    
+    // Outer glow
     ctx.shadowColor = this.color;
     ctx.shadowBlur = 20;
 
@@ -47,6 +57,16 @@ export class SnakeRemains extends Food {
     ctx.fillStyle = '#fff';
     ctx.fill();
 
+    // Score text
+    ctx.font = 'bold 14px Arial';
+    ctx.fillStyle = '#000';
+    ctx.textAlign = 'center';
+    ctx.fillText(`+${this.scoreValue}`, this.position.x, this.position.y + 5);
+
     ctx.restore();
+  }
+
+  public isExpired(): boolean {
+    return this.lifetime <= 0;
   }
 } 
