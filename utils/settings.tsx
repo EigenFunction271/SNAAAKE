@@ -23,13 +23,16 @@ export const defaultSettings: GameSettings = {
 export class SettingsManager {
   private static instance: SettingsManager;
   private settings: GameSettings;
+  private isClient = typeof window !== 'undefined';
 
   private constructor() {
-    // Load settings from localStorage or use defaults
-    const savedSettings = localStorage.getItem('snakeGameSettings');
-    this.settings = savedSettings 
-      ? { ...defaultSettings, ...JSON.parse(savedSettings) }
-      : defaultSettings;
+    this.settings = defaultSettings;
+    if (this.isClient) {
+      const savedSettings = localStorage.getItem('snakeGameSettings');
+      if (savedSettings) {
+        this.settings = { ...defaultSettings, ...JSON.parse(savedSettings) };
+      }
+    }
   }
 
   static getInstance(): SettingsManager {
@@ -44,6 +47,7 @@ export class SettingsManager {
   }
 
   updateSettings(newSettings: Partial<GameSettings>): void {
+    if (!this.isClient) return;
     this.settings = { ...this.settings, ...newSettings };
     localStorage.setItem('snakeGameSettings', JSON.stringify(this.settings));
   }

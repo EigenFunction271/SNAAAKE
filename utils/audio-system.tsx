@@ -6,14 +6,22 @@ interface AudioOptions {
 
 export class AudioSystem {
   private static instance: AudioSystem | null = null;
-  private context: AudioContext;
+  private context: AudioContext | null = null;
   private sounds: Map<string, AudioBuffer> = new Map();
   private musicBuffer: AudioBuffer | null = null;
   private musicSource: AudioBufferSourceNode | null = null;
-  private musicGain: GainNode;
-  private sfxGain: GainNode;
+  private musicGain: GainNode | null = null;
+  private sfxGain: GainNode | null = null;
+  private isClient: boolean;
 
   private constructor() {
+    this.isClient = typeof window !== 'undefined';
+    if (this.isClient) {
+      this.initializeAudio();
+    }
+  }
+
+  private initializeAudio() {
     this.context = new AudioContext();
     this.musicGain = this.context.createGain();
     this.sfxGain = this.context.createGain();
@@ -88,6 +96,7 @@ export class AudioSystem {
   }
 
   playSound(type: 'collect' | 'collision' | 'powerup' | 'gameover'): void {
+    if (!this.isClient || !this.context) return;
     const sound = this.sounds.get(type);
     if (!sound) return;
 
@@ -98,7 +107,7 @@ export class AudioSystem {
   }
 
   playMusic(): void {
-    if (this.musicSource || !this.musicBuffer) return;
+    if (!this.isClient || !this.context || !this.musicSource || !this.musicBuffer) return;
 
     this.musicSource = this.context.createBufferSource();
     this.musicSource.buffer = this.musicBuffer;

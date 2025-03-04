@@ -11,6 +11,7 @@ export interface GameSettings {
 
 export class SettingsManager {
   private static readonly STORAGE_KEY = 'snakeGameSettings';
+  private static isClient = typeof window !== 'undefined';
 
   private static defaultSettings: GameSettings = {
     soundEnabled: true,
@@ -25,6 +26,7 @@ export class SettingsManager {
 
   static getSettings(): GameSettings {
     try {
+      if (!this.isClient) return this.defaultSettings;
       const stored = localStorage.getItem(this.STORAGE_KEY);
       return stored ? { ...this.defaultSettings, ...JSON.parse(stored) } : this.defaultSettings;
     } catch (error) {
@@ -35,6 +37,7 @@ export class SettingsManager {
 
   static updateSettings(newSettings: Partial<GameSettings>): void {
     try {
+      if (!this.isClient) return;
       const currentSettings = this.getSettings();
       const updatedSettings = { ...currentSettings, ...newSettings };
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(updatedSettings));
@@ -45,6 +48,7 @@ export class SettingsManager {
 
   static resetSettings(): void {
     try {
+      if (!this.isClient) return;
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(this.defaultSettings));
     } catch (error) {
       console.error('Failed to reset settings:', error);

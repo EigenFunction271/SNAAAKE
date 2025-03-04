@@ -9,6 +9,7 @@
 # Next.js
 /.next/
 /out/
+.next/server/app-paths-manifest.json
 
 # Production
 /build

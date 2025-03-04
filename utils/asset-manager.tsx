@@ -21,6 +21,10 @@ export class AssetManager {
   }
 
   static getInstance(): AssetManager {
+    if (typeof window === 'undefined') {
+      // Return a mock instance for server-side rendering
+      return new AssetManager(); // Will be initialized with empty state
+    }
     if (!AssetManager.instance) {
       AssetManager.instance = new AssetManager();
     }
@@ -156,4 +160,4 @@ export class AssetManager {
     }
     return this.audioContext;
   }
-} 
+}

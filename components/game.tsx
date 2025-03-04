@@ -831,7 +831,6 @@ export default function SnakeGame() {
 
   // Draw HUD (score, etc.)
   const drawHUD = (ctx: CanvasRenderingContext2D) => {
-    // Existing HUD elements
     ctx.fillStyle = "#fff";
     ctx.font = '20px "Courier New", monospace';
     ctx.textAlign = "left";
