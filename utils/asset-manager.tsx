@@ -12,11 +12,11 @@ interface Asset {
 export class AssetManager {
   private static instance: AssetManager;
   private assets: Map<string, Asset> = new Map();
-  private audioContext: AudioContext;
+  private audioContext: AudioContext | null = null;
   private loadingPromises: Promise<void>[] = [];
+  private isClient = typeof window !== 'undefined';
 
   private constructor() {
-    this.audioContext = new AudioContext();
     this.initializeAssets();
   }
 
@@ -92,12 +92,13 @@ export class AssetManager {
   }
 
   private async loadAudio(key: string): Promise<void> {
+    if (!this.isClient) return;
     const asset = this.assets.get(key);
     if (!asset || asset.type !== 'audio') return;
 
     const response = await fetch(asset.path);
     const arrayBuffer = await response.arrayBuffer();
-    const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+    const audioBuffer = await this.getAudioContext().decodeAudioData(arrayBuffer);
     
     asset.data = audioBuffer;
     asset.loaded = true;
@@ -144,5 +145,15 @@ export class AssetManager {
     const total = this.assets.size;
     const loaded = Array.from(this.assets.values()).filter(a => a.loaded).length;
     return loaded / total;
+  }
+
+  private getAudioContext(): AudioContext {
+    if (!this.isClient) {
+      throw new Error('AudioContext is not available in server environment');
+    }
+    if (!this.audioContext) {
+      this.audioContext = new AudioContext();
+    }
+    return this.audioContext;
   }
 } 

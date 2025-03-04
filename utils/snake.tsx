@@ -30,7 +30,6 @@ interface SnakeSegment {
     velocity = { x: 0, y: 0 }
     angle: number
     speed: number
-    baseSpeed: number
     turningSpeed = 0.1
     color: string
     headColor: string

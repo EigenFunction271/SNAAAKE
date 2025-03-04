@@ -1,6 +1,6 @@
 export type AIBehaviorType = 'hunter' | 'survivor' | 'collector' | 'territorial' | 'aggressive' | 'passive' | 'mixed';
 
-interface AIBehaviorRule {
+export interface AIBehaviorRule {
   name: string;
   description: string;
   color: string;

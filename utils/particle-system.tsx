@@ -5,6 +5,7 @@ interface ParticleSystemOptions {
   particleCount: number;
   lifetime: number;
   speed?: number;
+  size?: number;
 }
 
 interface Particle {
@@ -19,9 +20,11 @@ interface Particle {
 export default class ParticleSystem {
   private particles: Particle[] = [];
   private lifetime: number;
+  private size: number;
 
   constructor(options: ParticleSystemOptions) {
     this.lifetime = options.lifetime;
+    this.size = options.size || 2;
     
     for (let i = 0; i < options.particleCount; i++) {
       const angle = Math.random() * Math.PI * 2;
@@ -53,7 +56,7 @@ export default class ParticleSystem {
       ctx.fillStyle = particle.color;
       
       ctx.beginPath();
-      ctx.arc(particle.x, particle.y, 2, 0, Math.PI * 2);
+      ctx.arc(particle.x, particle.y, this.size, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;

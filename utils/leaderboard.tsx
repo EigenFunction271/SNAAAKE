@@ -9,9 +9,11 @@ export interface LeaderboardEntry {
 export class LeaderboardManager {
   private static readonly STORAGE_KEY = 'snakeGameLeaderboard';
   private static readonly MAX_ENTRIES = 10;
+  private static isClient = typeof window !== 'undefined';
 
   static getLeaderboard(): LeaderboardEntry[] {
     try {
+      if (!this.isClient) return [];
       const stored = localStorage.getItem(this.STORAGE_KEY);
       return stored ? JSON.parse(stored) : [];
     } catch (error) {
@@ -22,6 +24,7 @@ export class LeaderboardManager {
 
   static addEntry(entry: LeaderboardEntry): void {
     try {
+      if (!this.isClient) return;
       const leaderboard = this.getLeaderboard();
       leaderboard.push(entry);
       
@@ -42,10 +45,10 @@ export class LeaderboardManager {
 
   static clearLeaderboard(): void {
     try {
+      if (!this.isClient) return;
       localStorage.removeItem(this.STORAGE_KEY);
     } catch (error) {
       console.error('Failed to clear leaderboard:', error);
     }
   }
-} 
 } 

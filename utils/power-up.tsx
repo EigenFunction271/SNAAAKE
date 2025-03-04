@@ -1,3 +1,5 @@
+import { Snake } from './snake';
+
 export type PowerUpType = 'speed' | 'invincible' | 'size';
 
 interface PowerUpOptions {
