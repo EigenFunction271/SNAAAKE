@@ -69,9 +69,6 @@ export function GameSetup({ onStart }: GameSetupProps) {
           <CardContent>
             <div className="space-y-6">
               <div className="space-y-4">
-                <label className="text-sm text-cyan-400">
-                  Number of AI Opponents: {aiCount}
-                </label>
                 <NeonSlider
                   label={`Number of AI Snakes: ${aiCount}`}
                   value={[aiCount]}
@@ -85,16 +82,24 @@ export function GameSetup({ onStart }: GameSetupProps) {
               </div>
 
               <div className="space-y-4">
-                <label className="text-sm text-cyan-400">AI Behaviors</label>
+                <h3 className="text-lg font-medium text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-300 tracking-wider uppercase text-center">
+                  AI Behaviors
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {Array.from({ length: aiCount }).map((_, index) => (
                     <Card
                       key={index}
-                      className="bg-black/30 border-cyan-500/20"
+                      glowColor={getBehaviorColor(selectedBehaviors[index])}
+                      intensity="low"
+                      variant="outline"
+                      className="overflow-hidden transition-all duration-300"
                     >
-                      <CardHeader className="p-4">
-                        <CardTitle className="text-sm">
-                          AI Snake {index + 1}
+                      <CardHeader className="p-4 border-b border-cyan-500/10">
+                        <CardTitle className="text-sm flex items-center justify-between">
+                          <span>AI Snake {index + 1}</span>
+                          <span className="text-xs px-2 py-1 rounded-full bg-black/40 border border-cyan-500/20">
+                            {AI_BEHAVIORS[selectedBehaviors[index]]?.name || "Unknown"}
+                          </span>
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="p-4 pt-0">
@@ -102,21 +107,11 @@ export function GameSetup({ onStart }: GameSetupProps) {
                           {Object.entries(AI_BEHAVIORS).map(([key, behavior]) => (
                             <Button
                               key={key}
-                              variant={
-                                selectedBehaviors[index] === key
-                                  ? "default"
-                                  : "outline"
-                              }
-                              className="w-full"
-                              style={{
-                                borderColor:
-                                  selectedBehaviors[index] === key
-                                    ? behavior.color
-                                    : undefined,
-                              }}
-                              onClick={() =>
-                                handleBehaviorChange(index, key as AIBehaviorType)
-                              }
+                              variant={selectedBehaviors[index] === key ? "default" : "outline"}
+                              color={getBehaviorColor(key as AIBehaviorType)}
+                              glow={selectedBehaviors[index] === key ? "medium" : "none"}
+                              className="w-full text-xs"
+                              onClick={() => handleBehaviorChange(index, key as AIBehaviorType)}
                             >
                               {behavior.name}
                             </Button>
@@ -140,6 +135,12 @@ export function GameSetup({ onStart }: GameSetupProps) {
         >
           START GAME
         </Button>
+
+        <div className="text-center text-gray-400 text-sm space-y-2">
+          <p>Use ARROW KEYS or WASD to control</p>
+          <p>Press UP or W for speed boost</p>
+          <p>Press ESC to pause</p>
+        </div>
       </div>
     </div>
   );
