@@ -9,7 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { AIBehaviorType, AI_BEHAVIORS } from "@/utils/ai-behaviors";
+import { type AIBehaviorType, AI_BEHAVIORS } from "@/utils/ai-behaviors";
 import { NeonSlider } from "@/components/ui/neon-slider";
 
 interface GameSetupProps {
@@ -61,26 +61,26 @@ export function GameSetup({ onStart }: GameSetupProps) {
           <p className="text-cyan-400 text-xl tracking-wider uppercase">Configure Your Game</p>
         </div>
 
-        <Card className="bg-black/50 border-cyan-500/30">
-          <CardHeader>
-            <CardTitle>AI Opponents</CardTitle>
-            <CardDescription>
-              Select the number of AI snakes and their behaviors
-            </CardDescription>
+        <Card glowColor="cyan" intensity="medium" className="overflow-hidden">
+          <CardHeader className="text-center border-b border-cyan-500/20">
+            <CardTitle className="text-2xl">AI Opponents</CardTitle>
+            <CardDescription>Select the number of AI snakes and their behaviors</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
               <div className="space-y-4">
                 <label className="text-sm text-cyan-400">
-                  Number of AI Snakes: {aiCount}
+                  Number of AI Opponents: {aiCount}
                 </label>
                 <NeonSlider
+                  label={`Number of AI Snakes: ${aiCount}`}
                   value={[aiCount]}
                   onValueChange={([value]) => setAICount(value)}
                   min={1}
                   max={10}
                   step={1}
-                  className="w-full"
+                  color="cyan"
+                  showValue={true}
                 />
               </div>
 
@@ -132,11 +132,13 @@ export function GameSetup({ onStart }: GameSetupProps) {
         </Card>
 
         <Button
-          className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
+          color="gradient"
+          glow="high"
           size="lg"
+          className="w-full py-6 text-lg font-bold tracking-wider"
           onClick={handleStart}
         >
-          Start Game
+          START GAME
         </Button>
       </div>
     </div>
