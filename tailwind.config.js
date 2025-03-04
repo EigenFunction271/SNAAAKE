@@ -62,6 +62,9 @@ module.exports = {
           '50%': { transform: 'translateY(-10px)' },
         },
       },
+      fontFamily: {
+        orbitron: ['Orbitron', 'sans-serif'],
+      },
     },
   },
   plugins: [],

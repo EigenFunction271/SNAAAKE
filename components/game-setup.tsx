@@ -55,72 +55,77 @@ export function GameSetup({ onStart }: GameSetupProps) {
     <div className="w-full min-h-screen flex flex-col items-center justify-center p-6 bg-black bg-opacity-90 bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.1)_0%,transparent_70%)]">
       <div className="max-w-4xl w-full space-y-8">
         <div className="text-center space-y-4">
-          <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600 animate-pulse drop-shadow-[0_0_15px_rgba(6,182,212,0.7)]">
+          <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600 animate-pulse drop-shadow-[0_0_15px_rgba(6,182,212,0.7)] font-orbitron">
             SNAPDRAGON
           </h1>
-          <p className="text-cyan-400 text-xl tracking-wider uppercase">Configure Your Game</p>
+          <p className="text-cyan-400 text-xl tracking-wider uppercase font-orbitron">Configure Your Game</p>
         </div>
 
-        <Card glowColor="cyan" intensity="medium" className="overflow-hidden">
+        <Card glowColor="cyan" intensity="medium" className="overflow-hidden bg-black/50">
           <CardHeader className="text-center border-b border-cyan-500/20">
-            <CardTitle className="text-2xl">AI Opponents</CardTitle>
-            <CardDescription>Select the number of AI snakes and their behaviors</CardDescription>
+            <CardTitle className="text-2xl font-orbitron text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">
+              AI Opponents
+            </CardTitle>
+            <CardDescription className="text-cyan-300/70 font-orbitron">
+              Select the number of AI Opponents and their behaviors
+            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
+          <CardContent className="p-6">
+            <div className="space-y-8">
               <div className="space-y-4">
-                <NeonSlider
-                  label={`Number of AI Snakes: ${aiCount}`}
-                  value={[aiCount]}
-                  onValueChange={([value]) => setAICount(value)}
-                  min={1}
-                  max={10}
-                  step={1}
-                  color="cyan"
-                  showValue={true}
-                />
+                <div className="w-full h-2 bg-gray-800 rounded-full overflow-hidden">
+                  <input
+                    type="range"
+                    min={1}
+                    max={10}
+                    value={aiCount}
+                    onChange={(e) => setAICount(parseInt(e.target.value))}
+                    className="w-full h-full appearance-none bg-gradient-to-r from-cyan-500 to-purple-600 cursor-pointer"
+                    style={{
+                      boxShadow: "0 0 10px rgba(6,182,212,0.5)",
+                    }}
+                  />
+                </div>
+                <p className="text-center text-cyan-400 font-orbitron">
+                  Number of AI Opponents: {aiCount}
+                </p>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium text-transparent bg-clip-text bg-gradient-to-r from-white to-cyan-300 tracking-wider uppercase text-center">
-                  AI Behaviors
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Array.from({ length: aiCount }).map((_, index) => (
-                    <Card
-                      key={index}
-                      glowColor={getBehaviorColor(selectedBehaviors[index])}
-                      intensity="low"
-                      variant="outline"
-                      className="overflow-hidden transition-all duration-300"
-                    >
-                      <CardHeader className="p-4 border-b border-cyan-500/10">
-                        <CardTitle className="text-sm flex items-center justify-between">
-                          <span>AI Snake {index + 1}</span>
-                          <span className="text-xs px-2 py-1 rounded-full bg-black/40 border border-cyan-500/20">
-                            {AI_BEHAVIORS[selectedBehaviors[index]]?.name || "Unknown"}
-                          </span>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-4 pt-0">
-                        <div className="grid grid-cols-2 gap-2">
-                          {Object.entries(AI_BEHAVIORS).map(([key, behavior]) => (
-                            <Button
-                              key={key}
-                              variant={selectedBehaviors[index] === key ? "default" : "outline"}
-                              color={getBehaviorColor(key as AIBehaviorType)}
-                              glow={selectedBehaviors[index] === key ? "medium" : "none"}
-                              className="w-full text-xs"
-                              onClick={() => handleBehaviorChange(index, key as AIBehaviorType)}
-                            >
-                              {behavior.name}
-                            </Button>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
+              <div className="space-y-6">
+                {Array.from({ length: aiCount }).map((_, index) => (
+                  <Card
+                    key={index}
+                    glowColor={getBehaviorColor(selectedBehaviors[index])}
+                    intensity="low"
+                    variant="outline"
+                    className="overflow-hidden bg-black/30"
+                  >
+                    <CardHeader className="p-4 border-b border-cyan-500/10">
+                      <CardTitle className="text-lg font-orbitron flex items-center justify-between text-cyan-400 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]">
+                        <span>AI Snake {index + 1}</span>
+                        <span className="text-sm px-3 py-1 rounded-full bg-black/40 border border-cyan-500/20">
+                          {AI_BEHAVIORS[selectedBehaviors[index]]?.name || "Unknown"}
+                        </span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-3 gap-3">
+                        {Object.entries(AI_BEHAVIORS).map(([key, behavior]) => (
+                          <Button
+                            key={key}
+                            variant={selectedBehaviors[index] === key ? "default" : "outline"}
+                            color={getBehaviorColor(key as AIBehaviorType)}
+                            glow={selectedBehaviors[index] === key ? "high" : "low"}
+                            className="w-full py-4 text-base font-orbitron rounded-lg transition-all duration-300 bg-black/50"
+                            onClick={() => handleBehaviorChange(index, key as AIBehaviorType)}
+                          >
+                            {behavior.name}
+                          </Button>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
             </div>
           </CardContent>
@@ -130,13 +135,13 @@ export function GameSetup({ onStart }: GameSetupProps) {
           color="gradient"
           glow="high"
           size="lg"
-          className="w-full py-6 text-lg font-bold tracking-wider"
+          className="w-full py-6 text-lg font-bold tracking-wider font-orbitron"
           onClick={handleStart}
         >
           START GAME
         </Button>
 
-        <div className="text-center text-gray-400 text-sm space-y-2">
+        <div className="text-center text-cyan-400/70 text-sm space-y-2 font-orbitron">
           <p>Use ARROW KEYS or WASD to control</p>
           <p>Press UP or W for speed boost</p>
           <p>Press ESC to pause</p>

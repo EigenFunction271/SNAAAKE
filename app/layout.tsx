@@ -1,4 +1,7 @@
 import './globals.css';
+import { Orbitron } from 'next/font/google'
+
+const orbitron = Orbitron({ subsets: ['latin'] })
 
 export const metadata = {
   title: 'Snapdragon',
@@ -11,7 +14,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={orbitron.className}>
       <body>{children}</body>
     </html>
   )
