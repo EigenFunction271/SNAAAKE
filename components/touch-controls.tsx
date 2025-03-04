@@ -1,88 +1,103 @@
-import { useEffect, useRef, useState } from 'react';
+"use client"
+
+import type React from "react"
+
+import { useState } from "react"
 
 interface TouchControlsProps {
-  onDirectionChange: (direction: { x: number; y: number }) => void;
-  onBoostStart: () => void;
-  onBoostEnd: () => void;
+  onDirectionChange: (direction: { x: number; y: number }) => void
+  onBoostStart: () => void
+  onBoostEnd: () => void
 }
 
-export function TouchControls({
-  onDirectionChange,
-  onBoostStart,
-  onBoostEnd
-}: TouchControlsProps) {
-  const joystickRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
+export function TouchControls({ onDirectionChange, onBoostStart, onBoostEnd }: TouchControlsProps) {
+  const [touchActive, setTouchActive] = useState(false)
+  const [touchStart, setTouchStart] = useState({ x: 0, y: 0 })
+  const [touchCurrent, setTouchCurrent] = useState({ x: 0, y: 0 })
+  const [boostActive, setBoostActive] = useState(false)
 
-  useEffect(() => {
-    const handleTouchMove = (e: TouchEvent) => {
-      if (!isDragging || !joystickRef.current) return;
+  // Handle touch events for directional control
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault()
+    const touch = e.touches[0]
+    setTouchStart({ x: touch.clientX, y: touch.clientY })
+    setTouchCurrent({ x: touch.clientX, y: touch.clientY })
+    setTouchActive(true)
+  }
 
-      const touch = e.touches[0];
-      const rect = joystickRef.current.getBoundingClientRect();
-      const centerX = rect.left + rect.width / 2;
-      const centerY = rect.top + rect.height / 2;
+  const handleTouchMove = (e: React.TouchEvent) => {
+    e.preventDefault()
+    if (!touchActive) return
+    const touch = e.touches[0]
+    setTouchCurrent({ x: touch.clientX, y: touch.clientY })
 
-      // Calculate direction vector
-      let dx = touch.clientX - centerX;
-      let dy = touch.clientY - centerY;
+    // Calculate direction vector
+    const dx = touch.clientX - touchStart.x
+    const dy = touch.clientY - touchStart.y
 
-      // Normalize vector
-      const length = Math.sqrt(dx * dx + dy * dy);
-      const maxRadius = 50;
-      
-      if (length > maxRadius) {
-        dx = (dx / length) * maxRadius;
-        dy = (dy / length) * maxRadius;
-      }
-
-      setPosition({ x: dx, y: dy });
+    // Normalize
+    const length = Math.sqrt(dx * dx + dy * dy)
+    if (length > 0) {
       onDirectionChange({
-        x: dx / maxRadius,
-        y: dy / maxRadius
-      });
-    };
+        x: dx / length,
+        y: dy / length,
+      })
+    }
+  }
 
-    const handleTouchEnd = () => {
-      setIsDragging(false);
-      setPosition({ x: 0, y: 0 });
-      onDirectionChange({ x: 0, y: 0 });
-    };
+  const handleTouchEnd = () => {
+    setTouchActive(false)
+    onDirectionChange({ x: 0, y: 0 })
+  }
 
-    window.addEventListener('touchmove', handleTouchMove);
-    window.addEventListener('touchend', handleTouchEnd);
+  // Handle boost button
+  const handleBoostStart = () => {
+    setBoostActive(true)
+    onBoostStart()
+  }
 
-    return () => {
-      window.removeEventListener('touchmove', handleTouchMove);
-      window.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [isDragging, onDirectionChange]);
+  const handleBoostEnd = () => {
+    setBoostActive(false)
+    onBoostEnd()
+  }
 
   return (
-    <div className="fixed bottom-8 left-0 right-0 flex justify-between px-8">
-      {/* Joystick */}
-      <div 
-        className="w-32 h-32 rounded-full bg-black/30 border-2 border-cyan-500/30 relative"
-        ref={joystickRef}
-        onTouchStart={() => setIsDragging(true)}
+    <div className="fixed bottom-4 left-0 right-0 flex justify-between px-4 z-20">
+      {/* Joystick area */}
+      <div
+        className="w-32 h-32 rounded-full bg-black/30 border-2 border-cyan-500/50 relative touch-none shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
-        <div
-          className="w-16 h-16 rounded-full bg-cyan-500/50 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 transition-transform"
-          style={{
-            transform: `translate(${position.x}px, ${position.y}px)`
-          }}
-        />
+        {touchActive && (
+          <div
+            className="absolute w-16 h-16 rounded-full bg-gradient-to-r from-cyan-500 to-purple-600 shadow-[0_0_10px_rgba(6,182,212,0.7)]"
+            style={{
+              left: `calc(50% + ${Math.min(Math.max((touchCurrent.x - touchStart.x) / 2, -32), 32)}px)`,
+              top: `calc(50% + ${Math.min(Math.max((touchCurrent.y - touchStart.y) / 2, -32), 32)}px)`,
+              transform: "translate(-50%, -50%)",
+            }}
+          />
+        )}
+        <div className="absolute inset-0 flex items-center justify-center text-cyan-400 opacity-70 pointer-events-none">
+          MOVE
+        </div>
       </div>
 
       {/* Boost button */}
-      <button
-        className="w-32 h-32 rounded-full bg-purple-500/30 border-2 border-purple-500/30 active:bg-purple-500/50"
-        onTouchStart={onBoostStart}
-        onTouchEnd={onBoostEnd}
+      <div
+        className={`w-32 h-32 rounded-full flex items-center justify-center text-white font-bold text-xl touch-none transition-all duration-200 ${
+          boostActive
+            ? "bg-gradient-to-r from-purple-600 to-pink-600 shadow-[0_0_20px_rgba(168,85,247,0.7)]"
+            : "bg-gradient-to-r from-cyan-800 to-purple-800 shadow-[0_0_15px_rgba(6,182,212,0.4)]"
+        }`}
+        onTouchStart={handleBoostStart}
+        onTouchEnd={handleBoostEnd}
       >
         BOOST
-      </button>
+      </div>
     </div>
-  );
-} 
+  )
+}
+
