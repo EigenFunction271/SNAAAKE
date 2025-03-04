@@ -68,6 +68,14 @@ export default function SnakeGame() {
   // Initialize dimensions on mount
     useEffect(() => {
       // Only run on client side
+      if (typeof window !== 'undefined') {
+        setDimensions({
+          width: Math.max(800, Math.min(window.innerWidth * 0.9, 1600)),
+          height: Math.max(600, Math.min(window.innerHeight * 0.8, 1000))
+        });
+      }
+    }, []);
+
   // Add responsive state
   const isMobile = useMediaQuery("(max-width: 768px)")
   const [touchDirection, setTouchDirection] = useState({ x: 0, y: 0 })
@@ -1369,10 +1377,12 @@ export default function SnakeGame() {
 
   // Handle window resize
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
     const handleResize = () => {
       setDimensions({
-        width: Math.min(window.innerWidth * 0.9, 1600),
-        height: Math.min(window.innerHeight * 0.8, 1000)
+        width: Math.max(800, Math.min(window.innerWidth * 0.9, 1600)),
+        height: Math.max(600, Math.min(window.innerHeight * 0.8, 1000))
       })
     }
     

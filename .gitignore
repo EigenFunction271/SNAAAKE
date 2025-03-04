@@ -39,10 +39,9 @@ yarn-error.log*
 next-env.d.ts
 
 # Game specific
-/public/assets/audio/*
-/public/assets/images/*
-!public/assets/audio/.gitkeep
-!public/assets/images/.gitkeep
+# Keep game assets
+!public/assets/audio/
+!public/assets/images/
 
 # local env files
 .env*.local

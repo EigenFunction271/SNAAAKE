@@ -60,39 +60,50 @@ export class AssetManager {
   }
 
   async loadAll(): Promise<void> {
-    // Check if we're using real assets or placeholders
-    const usePlaceholders = process.env.NODE_ENV === 'development';
-
-    if (usePlaceholders) {
-      this.loadPlaceholders();
-      return;
+    try {
+      const loadPromises = Array.from(this.assets.values()).map(async (asset) => {
+        try {
+          if (asset.type === 'image') {
+            await this.loadImage(asset.path);
+          } else if (asset.type === 'audio') {
+            await this.loadAudio(asset.path);
+          }
+        } catch (error) {
+          console.warn(`Failed to load asset ${asset.path}:`, error);
+          // Continue loading other assets
+        }
+      });
+      await Promise.all(loadPromises);
+    } catch (error) {
+      console.error('Asset loading error:', error);
     }
-
-    this.assets.forEach((asset, key) => {
-      if (asset.type === 'image') {
-        this.loadingPromises.push(this.loadImage(key));
-      } else {
-        this.loadingPromises.push(this.loadAudio(key));
-      }
-    });
-
-    await Promise.all(this.loadingPromises);
   }
 
   private async loadImage(key: string): Promise<void> {
     const asset = this.assets.get(key);
     if (!asset || asset.type !== 'image') return;
 
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => {
-        asset.data = img;
-        asset.loaded = true;
-        resolve();
-      };
-      img.onerror = reject;
-      img.src = asset.path;
-    });
+    try {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          asset.data = img;
+          asset.loaded = true;
+          resolve();
+        };
+        img.onerror = () => {
+          console.warn(`Failed to load image ${asset.path}, using placeholder`);
+          asset.data = PlaceholderAssets.createPlaceholderImage(32, 32, '#fff', 'rect');
+          asset.loaded = true;
+          resolve();
+        };
+        img.src = asset.path;
+      });
+    } catch (error) {
+      console.warn(`Error loading image ${asset.path}, using placeholder`);
+      asset.data = PlaceholderAssets.createPlaceholderImage(32, 32, '#fff', 'rect');
+      asset.loaded = true;
+    }
   }
 
   private async loadAudio(key: string): Promise<void> {
@@ -100,12 +111,22 @@ export class AssetManager {
     const asset = this.assets.get(key);
     if (!asset || asset.type !== 'audio') return;
 
-    const response = await fetch(asset.path);
-    const arrayBuffer = await response.arrayBuffer();
-    const audioBuffer = await this.getAudioContext().decodeAudioData(arrayBuffer);
-    
-    asset.data = audioBuffer;
-    asset.loaded = true;
+    try {
+      const response = await fetch(asset.path);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await this.getAudioContext().decodeAudioData(arrayBuffer);
+      
+      asset.data = audioBuffer;
+      asset.loaded = true;
+    } catch (error) {
+      console.warn(`Failed to load audio ${asset.path}, using placeholder`);
+      const type = key.includes('background') ? 'background' : 
+                   key.includes('collect') ? 'collect' :
+                   key.includes('collision') ? 'collision' :
+                   key.includes('powerup') ? 'powerup' : 'gameover';
+      asset.data = PlaceholderAssets.createPlaceholderAudio(type);
+      asset.loaded = true;
+    }
   }
 
   private loadPlaceholders(): void {

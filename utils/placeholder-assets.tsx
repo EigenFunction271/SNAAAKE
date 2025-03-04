@@ -3,52 +3,23 @@ export class PlaceholderAssets {
     width: number,
     height: number,
     color: string,
-    shape: 'circle' | 'star' | 'rect' = 'rect'
+    shape: 'rect' | 'star'
   ): HTMLImageElement {
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext('2d')!;
 
-    // Clear background
-    ctx.fillStyle = 'transparent';
+    // Fill background
+    ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, width, height);
 
     // Draw shape
     ctx.fillStyle = color;
-    ctx.strokeStyle = 'white';
-    ctx.lineWidth = 2;
-
-    switch (shape) {
-      case 'circle':
-        ctx.beginPath();
-        ctx.arc(width/2, height/2, Math.min(width, height)/2 - 2, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        break;
-
-      case 'star':
-        const spikes = 5;
-        const outerRadius = Math.min(width, height)/2 - 2;
-        const innerRadius = outerRadius * 0.4;
-        
-        ctx.beginPath();
-        for (let i = 0; i < spikes * 2; i++) {
-          const radius = i % 2 === 0 ? outerRadius : innerRadius;
-          const angle = (Math.PI * i) / spikes;
-          const x = width/2 + Math.cos(angle) * radius;
-          const y = height/2 + Math.sin(angle) * radius;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        }
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-        break;
-
-      default:
-        ctx.fillRect(2, 2, width-4, height-4);
-        ctx.strokeRect(2, 2, width-4, height-4);
+    if (shape === 'star') {
+      this.drawStar(ctx, width/2, height/2, 5, width/3, width/6);
+    } else {
+      ctx.fillRect(2, 2, width-4, height-4);
     }
 
     // Convert to image
@@ -62,98 +33,67 @@ export class PlaceholderAssets {
   ): AudioBuffer {
     const sampleRate = 44100;
     const audioContext = new AudioContext();
-
+    
     // Create different sounds based on type
-    switch (type) {
+    let duration = type === 'background' ? 2.0 : 0.1;
+    let buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
+    let data = buffer.getChannelData(0);
+
+    switch(type) {
       case 'collect':
-        return this.createBeepSound(audioContext, 880, 0.1); // High beep
+        this.generateBeep(data, 440, sampleRate); // A4 note
+        break;
       case 'collision':
-        return this.createNoiseSound(audioContext, 0.2); // Short noise
+        this.generateNoise(data, 0.3);
+        break;
       case 'powerup':
-        return this.createSweepSound(audioContext, 440, 880, 0.3); // Sweep up
+        this.generateBeep(data, 880, sampleRate); // A5 note
+        break;
       case 'gameover':
-        return this.createSweepSound(audioContext, 880, 220, 0.5); // Sweep down
+        this.generateBeep(data, 220, sampleRate); // A3 note
+        break;
       case 'background':
-        return this.createAmbientSound(audioContext, 5); // 5-second loop
-      default:
-        return this.createBeepSound(audioContext, 440, 0.1); // Default beep
-    }
-  }
-
-  private static createBeepSound(
-    context: AudioContext,
-    frequency: number,
-    duration: number
-  ): AudioBuffer {
-    const sampleRate = context.sampleRate;
-    const samples = duration * sampleRate;
-    const buffer = context.createBuffer(1, samples, sampleRate);
-    const data = buffer.getChannelData(0);
-
-    for (let i = 0; i < samples; i++) {
-      data[i] = Math.sin(2 * Math.PI * frequency * i / sampleRate) *
-                Math.exp(-3 * i / samples); // Add decay
+        this.generateAmbient(data, sampleRate);
+        break;
     }
 
     return buffer;
   }
 
-  private static createNoiseSound(
-    context: AudioContext,
-    duration: number
-  ): AudioBuffer {
-    const sampleRate = context.sampleRate;
-    const samples = duration * sampleRate;
-    const buffer = context.createBuffer(1, samples, sampleRate);
-    const data = buffer.getChannelData(0);
-
-    for (let i = 0; i < samples; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.exp(-5 * i / samples);
+  private static drawStar(ctx: CanvasRenderingContext2D, x: number, y: number, points: number, outer: number, inner: number) {
+    ctx.beginPath();
+    for (let i = 0; i < points * 2; i++) {
+      const radius = i % 2 === 0 ? outer : inner;
+      const angle = (i * Math.PI) / points;
+      const pX = x + radius * Math.sin(angle);
+      const pY = y + radius * Math.cos(angle);
+      if (i === 0) ctx.moveTo(pX, pY);
+      else ctx.lineTo(pX, pY);
     }
-
-    return buffer;
+    ctx.closePath();
+    ctx.fill();
   }
 
-  private static createSweepSound(
-    context: AudioContext,
-    startFreq: number,
-    endFreq: number,
-    duration: number
-  ): AudioBuffer {
-    const sampleRate = context.sampleRate;
-    const samples = duration * sampleRate;
-    const buffer = context.createBuffer(1, samples, sampleRate);
-    const data = buffer.getChannelData(0);
-
-    for (let i = 0; i < samples; i++) {
-      const t = i / samples;
-      const frequency = startFreq + (endFreq - startFreq) * t;
-      data[i] = Math.sin(2 * Math.PI * frequency * i / sampleRate) *
-                Math.exp(-2 * i / samples);
+  private static generateBeep(data: Float32Array, frequency: number, sampleRate: number) {
+    for (let i = 0; i < data.length; i++) {
+      data[i] = Math.sin(2 * Math.PI * frequency * i / sampleRate) * 0.5;
     }
-
-    return buffer;
   }
 
-  private static createAmbientSound(
-    context: AudioContext,
-    duration: number
-  ): AudioBuffer {
-    const sampleRate = context.sampleRate;
-    const samples = duration * sampleRate;
-    const buffer = context.createBuffer(1, samples, sampleRate);
-    const data = buffer.getChannelData(0);
-
-    // Create a simple ambient drone
-    for (let i = 0; i < samples; i++) {
-      const t = i / sampleRate;
-      data[i] = (
-        Math.sin(2 * Math.PI * 220 * t) * 0.3 +
-        Math.sin(2 * Math.PI * 440 * t) * 0.2 +
-        Math.sin(2 * Math.PI * 880 * t) * 0.1
-      ) * 0.5;
+  private static generateNoise(data: Float32Array, volume: number) {
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * volume;
     }
+  }
 
-    return buffer;
+  private static generateAmbient(data: Float32Array, sampleRate: number) {
+    const frequencies = [220, 277.18, 329.63]; // A3, C#4, E4
+    for (let i = 0; i < data.length; i++) {
+      let sample = 0;
+      frequencies.forEach(freq => {
+        sample += Math.sin(2 * Math.PI * freq * i / sampleRate) * 0.2;
+      });
+      data[i] = sample / frequencies.length;
+    }
   }
 } 
