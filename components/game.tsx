@@ -94,7 +94,7 @@ export default function SnakeGame() {
   // Modify the score state to update our ref
   useEffect(() => {
     currentScoreRef.current = score;
-    console.log('Score state changed:', score);
+    console.log('Score updated - State:', score, 'Ref:', currentScoreRef.current);
   }, [score]);
 
   // Initialize game
@@ -291,7 +291,7 @@ export default function SnakeGame() {
     if (!ctx) return;
 
     if (gameState === "playing") {
-      console.log('Game loop tick - Current score:', score);
+      console.log('Game loop tick - State score:', score, 'Ref score:', currentScoreRef.current);
       inputSystem();
       physicsSystem();
       collisionSystem();
@@ -474,9 +474,15 @@ export default function SnakeGame() {
 
       if (distance < playerHead.radius + food.radius) {
         const scoreIncrease = food.type === 'special' ? 30 : 10;
+        console.log('Food collision - Current scores:', {
+          state: score,
+          ref: currentScoreRef.current,
+          increase: scoreIncrease
+        });
         
         setScore(prevScore => {
           const newScore = prevScore + scoreIncrease;
+          console.log('Updating score to:', newScore);
           return newScore;
         });
 

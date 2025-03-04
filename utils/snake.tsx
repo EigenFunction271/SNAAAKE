@@ -48,9 +48,9 @@ interface SnakeSegment {
   
     constructor(options: SnakeOptions) {
       this.angle = options.initialAngle
-      this.speed = options.speed
-      this.baseSpeed = options.speed
-      this.currentSpeed = options.speed
+      this.speed = options.speed *1.75  
+      this.baseSpeed = options.speed *1.75
+      this.currentSpeed = options.speed *1.75
       this.color = options.color
       this.headColor = options.headColor
       this.targetLength = options.initialLength
@@ -91,7 +91,7 @@ interface SnakeSegment {
       // Update visual effects
       this.glowPhase += 0.1;
 
-      // Use currentSpeed instead of speed for movement
+      // Use currentSpeed for movement
       this.velocity = {
         x: Math.cos(this.angle) * this.currentSpeed,
         y: Math.sin(this.angle) * this.currentSpeed,
@@ -228,8 +228,8 @@ interface SnakeSegment {
     }
   
     boost() {
-      this.speed = this.baseSpeed * 2;
-      console.log('Snake boosting, speed:', this.speed);
+      this.currentSpeed = this.baseSpeed * 2;
+      console.log('Snake boosting, speed:', this.currentSpeed);
     }
   
     normalSpeed() {
