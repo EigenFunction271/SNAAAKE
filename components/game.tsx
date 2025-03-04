@@ -1063,25 +1063,30 @@ export default function SnakeGame() {
   const renderGameOverScreen = () => {
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center bg-black bg-opacity-80 z-10">
-        <h2 className="text-5xl font-bold mb-2 text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.7)] animate-pulse">
-          GAME OVER
-        </h2>
-        <p className="text-3xl mb-8 text-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.7)]">SCORE: {score}</p>
-        <div className="space-y-4 w-64">
-          <Button
-            className="w-full py-5 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 shadow-[0_0_15px_rgba(6,182,212,0.5)] hover:shadow-[0_0_25px_rgba(6,182,212,0.7)] transition-all duration-300 border border-cyan-400/30"
-            onClick={startGame}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            PLAY AGAIN
-          </Button>
-          <Button
-            variant="outline"
-            className="w-full py-5 border-cyan-500 text-cyan-400 hover:bg-cyan-950/50 shadow-[0_0_10px_rgba(6,182,212,0.3)] hover:shadow-[0_0_15px_rgba(6,182,212,0.5)] transition-all duration-300"
-            onClick={() => setGameState("menu")}
-          >
-            MAIN MENU
-          </Button>
+        <div className="text-center space-y-6">
+          <h2 className="text-6xl font-bold font-orbitron text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-purple-600 animate-pulse drop-shadow-[0_0_15px_rgba(239,68,68,0.7)]">
+            GAME OVER
+          </h2>
+          <p className="text-4xl font-orbitron text-cyan-400 drop-shadow-[0_0_10px_rgba(6,182,212,0.7)]">
+            SCORE: {score}
+          </p>
+          
+          <div className="space-y-4 w-80 mx-auto mt-8">
+            <Button
+              className="w-full py-6 text-lg font-orbitron bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 shadow-[0_0_15px_rgba(6,182,212,0.5)] hover:shadow-[0_0_25px_rgba(6,182,212,0.7)] transition-all duration-300 border border-cyan-400/30"
+              onClick={startGame}
+            >
+              <RefreshCw className="mr-2 h-5 w-5" />
+              PLAY AGAIN
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full py-6 text-lg font-orbitron border-cyan-500 text-cyan-400 hover:bg-cyan-950/50 shadow-[0_0_10px_rgba(6,182,212,0.3)] hover:shadow-[0_0_15px_rgba(6,182,212,0.5)] transition-all duration-300"
+              onClick={() => setGameState("menu")}
+            >
+              MAIN MENU
+            </Button>
+          </div>
         </div>
       </div>
     )
@@ -1400,30 +1405,39 @@ export default function SnakeGame() {
 
   // Render game controls
   return (
-    <div className="relative w-full max-w-[1600px] mx-auto flex items-center justify-center p-4">
+    <div className="relative w-full min-h-screen flex items-center justify-center bg-black">
       {loading ? (
         <LoadingScreen progress={loadingProgress} />
       ) : (
         <>
-          <canvas
-            ref={canvasRef}
-            width={dimensions.width}
-            height={dimensions.height}
-            className="border border-cyan-900 rounded-lg shadow-lg shadow-cyan-500/20 max-w-full h-auto"
-          />
+          {gameState === "menu" ? (
+            // Full screen menu
+            <div className="w-full min-h-screen absolute inset-0 flex items-center justify-center">
+              {renderMenu()}
+            </div>
+          ) : (
+            // Game canvas and controls
+            <>
+              <canvas
+                ref={canvasRef}
+                width={dimensions.width}
+                height={dimensions.height}
+                className="border border-cyan-900 rounded-lg shadow-lg shadow-cyan-500/20 max-w-full h-auto"
+              />
 
-          {gameState === "menu" && renderMenu()}
-          {gameState === "paused" && renderPauseScreen()}
-          {gameState === "gameOver" && renderGameOverScreen()}
-          {renderGameControls()}
+              {gameState === "paused" && renderPauseScreen()}
+              {gameState === "gameOver" && renderGameOverScreen()}
+              {renderGameControls()}
 
-          {/* Show touch controls on mobile during gameplay */}
-          {isMobile && gameState === "playing" && (
-            <TouchControls
-              onDirectionChange={handleDirectionChange}
-              onBoostStart={() => setIsBoosting(true)}
-              onBoostEnd={() => setIsBoosting(false)}
-            />
+              {/* Show touch controls on mobile during gameplay */}
+              {isMobile && gameState === "playing" && (
+                <TouchControls
+                  onDirectionChange={handleDirectionChange}
+                  onBoostStart={() => setIsBoosting(true)}
+                  onBoostEnd={() => setIsBoosting(false)}
+                />
+              )}
+            </>
           )}
         </>
       )}

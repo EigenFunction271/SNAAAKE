@@ -26,14 +26,14 @@ export function LeaderboardDisplay({
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-black/50 border border-cyan-500/30 rounded-lg p-6 max-w-2xl w-full mx-4">
-        <h2 className="text-2xl font-bold text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600">
+        <h2 className="text-4xl font-bold text-center mb-6 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600 font-orbitron">
           Leaderboard
         </h2>
 
         {currentScore && (
-          <div className="mb-6 p-4 bg-cyan-500/20 rounded-lg">
-            <h3 className="text-cyan-400 mb-2">Your Score</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="mb-6 p-4 bg-cyan-500/20 rounded-lg border border-cyan-500/30">
+            <h3 className="text-cyan-400 mb-2 font-orbitron">Your Score</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 font-orbitron">
               <div>
                 <div className="text-sm text-gray-400">Score</div>
                 <div className="font-mono text-xl">{currentScore.score}</div>
@@ -58,9 +58,9 @@ export function LeaderboardDisplay({
           {entries.map((entry, index) => (
             <div
               key={index}
-              className={`grid grid-cols-2 md:grid-cols-4 gap-4 p-3 rounded ${
+              className={`grid grid-cols-2 md:grid-cols-4 gap-4 p-3 rounded font-orbitron ${
                 currentScore && entry.score === currentScore.score
-                  ? "bg-cyan-500/20"
+                  ? "bg-cyan-500/20 border border-cyan-500/30"
                   : "bg-black/30"
               }`}
             >
@@ -78,13 +78,13 @@ export function LeaderboardDisplay({
         <div className="flex space-x-4">
           <button
             onClick={onPlayAgain}
-            className="flex-1 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white py-2 px-4 rounded"
+            className="flex-1 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700 text-white py-4 px-6 rounded font-orbitron text-lg transition-all duration-300 shadow-[0_0_15px_rgba(6,182,212,0.5)] hover:shadow-[0_0_25px_rgba(6,182,212,0.7)]"
           >
             Play Again
           </button>
           <button
             onClick={onMainMenu}
-            className="flex-1 border border-cyan-500 text-cyan-400 hover:bg-cyan-500/20 py-2 px-4 rounded"
+            className="flex-1 border border-cyan-500 text-cyan-400 hover:bg-cyan-500/20 py-4 px-6 rounded font-orbitron text-lg transition-all duration-300 shadow-[0_0_10px_rgba(6,182,212,0.3)] hover:shadow-[0_0_20px_rgba(6,182,212,0.5)]"
           >
             Main Menu
           </button>
