@@ -23,7 +23,7 @@ type GameState = "menu" | "playing" | "paused" | "gameOver"
 
 // Add these constants near the top of the component
 const MIN_FOOD_COUNT = 3;
-const MAX_FOOD_COUNT = 10;
+const MAX_FOOD_COUNT = 15;
 
 // Add this constant at the top of the file with other constants
 const BEHAVIOR_OPTIONS: AIBehaviorType[] = ['passive', 'aggressive', 'territorial', 'mixed'];
@@ -60,8 +60,10 @@ export default function SnakeGame() {
     const keysPressed = useRef<Set<string>>(new Set())
 
   // Canvas dimensions
-    const canvasWidth = 800
-    const canvasHeight = 600
+    const [dimensions, setDimensions] = useState({
+      width: Math.max(800, Math.min(window.innerWidth * 0.9, 1600)),
+      height: Math.max(600, Math.min(window.innerHeight * 0.8, 1000))
+    })
 
   // Add responsive state
   const isMobile = useMediaQuery("(max-width: 768px)")
@@ -103,9 +105,9 @@ export default function SnakeGame() {
     const canvas = canvasRef.current
     if (!canvas) return
 
-    canvas.width = canvasWidth
-    canvas.height = canvasHeight
-    console.log('Canvas initialized:', { width: canvasWidth, height: canvasHeight });
+    canvas.width = dimensions.width
+    canvas.height = dimensions.height
+    console.log('Canvas initialized:', { width: dimensions.width, height: dimensions.height });
 
     // Load high score from localStorage
     const savedHighScore = localStorage.getItem("snakeHighScore")
@@ -157,7 +159,7 @@ export default function SnakeGame() {
     const ctx = canvas.getContext('2d');
     if (ctx) {
       ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+      ctx.fillRect(0, 0, dimensions.width, dimensions.height);
       drawGrid(ctx);
     }
 
@@ -203,14 +205,15 @@ export default function SnakeGame() {
     try {
     // Reset game objects
     playerSnakeRef.current = new Snake({
-      x: canvasWidth / 2,
-      y: canvasHeight / 2,
+      x: dimensions.width / 2,
+      y: dimensions.height / 2,
       color: "#0ff",
       headColor: "#f0f",
       initialLength: 5,
       initialAngle: Math.PI / 2,
-      speed: 2,
-      });
+      speed: 2.5,
+      size: Math.min(dimensions.width, dimensions.height) / 50,
+    });
 
       // Clear existing food
       foodRef.current = [];
@@ -224,9 +227,9 @@ export default function SnakeGame() {
       // Initialize canvas dimensions
       const canvas = canvasRef.current;
       if (canvas) {
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
-        console.log('Canvas dimensions set:', { width: canvasWidth, height: canvasHeight });
+        canvas.width = dimensions.width;
+        canvas.height = dimensions.height;
+        console.log('Canvas dimensions set:', { width: dimensions.width, height: dimensions.height });
       }
 
       // Initialize AI snakes with individual settings
@@ -238,8 +241,8 @@ export default function SnakeGame() {
         }[aiDifficulty];
 
         return new AISnake({
-          x: Math.random() * canvasWidth,
-          y: Math.random() * canvasHeight,
+          x: Math.random() * dimensions.width,
+          y: Math.random() * dimensions.height,
           color: color,
           headColor: "#fff",
           initialLength: 3,
@@ -315,7 +318,7 @@ export default function SnakeGame() {
   const renderSystem = (ctx: CanvasRenderingContext2D) => {
     // Clear canvas
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    ctx.fillRect(0, 0, dimensions.width, dimensions.height);
     
     // Draw grid
     drawGrid(ctx);
@@ -352,12 +355,12 @@ export default function SnakeGame() {
   const physicsSystem = () => {
     // Update player snake
     if (playerSnakeRef.current) {
-      playerSnakeRef.current.update(canvasWidth, canvasHeight);
+      playerSnakeRef.current.update(dimensions.width, dimensions.height);
     }
 
     // Update AI snakes
     for (const aiSnake of aiSnakesRef.current) {
-      aiSnake.update(canvasWidth, canvasHeight);
+      aiSnake.update(dimensions.width, dimensions.height);
     }
 
     // Update food animations
@@ -401,23 +404,26 @@ export default function SnakeGame() {
 
   // Draw grid lines for futuristic effect
   const drawGrid = (ctx: CanvasRenderingContext2D) => {
-    ctx.strokeStyle = "rgba(0, 255, 255, 0.1)";
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(0, 255, 255, 0.1)"
+    ctx.lineWidth = 1
+   
+    // Scale grid size based on canvas dimensions
+    const gridSize = Math.min(dimensions.width, dimensions.height) / 20
 
     // Vertical lines
-    for (let x = 0; x <= canvasWidth; x += 40) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, canvasHeight);
-      ctx.stroke();
+    for (let x = 0; x <= dimensions.width; x += gridSize) {
+      ctx.beginPath()
+      ctx.moveTo(x, 0)
+      ctx.lineTo(x, dimensions.height)
+      ctx.stroke()
     }
 
     // Horizontal lines
-    for (let y = 0; y <= canvasHeight; y += 40) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(canvasWidth, y);
-      ctx.stroke();
+    for (let y = 0; y <= dimensions.height; y += gridSize) {
+      ctx.beginPath()
+      ctx.moveTo(0, y)
+      ctx.lineTo(dimensions.width, y)
+      ctx.stroke()
     }
   }
 
@@ -492,8 +498,9 @@ export default function SnakeGame() {
             x: food.position.x,
             y: food.position.y,
             color: food.color,
-            particleCount: 15,
+            particleCount: Math.floor(Math.min(dimensions.width, dimensions.height) / 20),
             lifetime: 25,
+            size: Math.min(dimensions.width, dimensions.height) / 150,
           })
         );
 
@@ -535,9 +542,10 @@ export default function SnakeGame() {
             x: remains.position.x,
             y: remains.position.y,
             color: remains.color,
-            particleCount: 30,
+            particleCount: Math.floor(Math.min(dimensions.width, dimensions.height) / 20),
             lifetime: 40,
             speed: 2,
+            size: Math.min(dimensions.width, dimensions.height) / 150,
           })
         );
 
@@ -620,8 +628,10 @@ export default function SnakeGame() {
         x: snake.getHead().x,
         y: snake.getHead().y,
         color: snake.color,
-            particleCount: 30,
+            particleCount: Math.floor(Math.min(dimensions.width, dimensions.height) / 20),
             lifetime: 40,
+            speed: 3,
+            size: Math.min(dimensions.width, dimensions.height) / 150,
       })
     );
   };
@@ -658,12 +668,12 @@ export default function SnakeGame() {
         playerSnakeRef.current,
         aiSnakesRef.current.filter((snake) => snake !== aiSnake),
         powerUpsRef.current,
-        canvasWidth,
-        canvasHeight
+        dimensions.width,
+        dimensions.height
       );
 
       // Update position
-      aiSnake.update(canvasWidth, canvasHeight);
+      aiSnake.update(dimensions.width, dimensions.height);
 
       // Check for food collision
       const aiHead = aiSnake.getHead();
@@ -680,8 +690,9 @@ export default function SnakeGame() {
               x: food.position.x,
               y: food.position.y,
               color: food.color,
-              particleCount: 15,
+              particleCount: Math.floor(Math.min(dimensions.width, dimensions.height) / 20),
               lifetime: 25,
+              size: Math.min(dimensions.width, dimensions.height) / 150,
             })
           );
 
@@ -713,8 +724,10 @@ export default function SnakeGame() {
               x: powerUp.position.x,
               y: powerUp.position.y,
               color: powerUp.color,
-              particleCount: 30,
-              lifetime: 40,
+              particleCount: Math.floor(Math.min(dimensions.width, dimensions.height) / 20),
+              lifetime: 60,
+              speed: 3,
+              size: Math.min(dimensions.width, dimensions.height) / 150,
             })
           );
 
@@ -746,8 +759,8 @@ export default function SnakeGame() {
       const maxAttempts = 10;
 
       while (!validPosition && attempts < maxAttempts) {
-        x = Math.random() * (canvasWidth - 40) + 20;
-        y = Math.random() * (canvasHeight - 40) + 20;
+        x = Math.random() * (dimensions.width - 40) + 20;
+        y = Math.random() * (dimensions.height - 40) + 20;
         validPosition = true;
         attempts++;
 
@@ -796,23 +809,23 @@ export default function SnakeGame() {
 
     switch (side) {
       case 0: // Top
-        x = Math.random() * canvasWidth
+        x = Math.random() * dimensions.width
         y = 20
         angle = Math.PI / 2
         break
       case 1: // Right
-        x = canvasWidth - 20
-        y = Math.random() * canvasHeight
+        x = dimensions.width - 20
+        y = Math.random() * dimensions.height
         angle = Math.PI
         break
       case 2: // Bottom
-        x = Math.random() * canvasWidth
-        y = canvasHeight - 20
+        x = Math.random() * dimensions.width
+        y = dimensions.height - 20
         angle = -Math.PI / 2
         break
       case 3: // Left
         x = 20
-        y = Math.random() * canvasHeight
+        y = Math.random() * dimensions.height
         angle = 0
         break
     }
@@ -898,9 +911,10 @@ export default function SnakeGame() {
           x: head.x,
           y: head.y,
           color: playerSnakeRef.current.headColor,
-          particleCount: 50,
+          particleCount: Math.floor(Math.min(dimensions.width, dimensions.height) / 16),
           lifetime: 60,
           speed: 3,
+          size: Math.min(dimensions.width, dimensions.height) / 100,
         }),
       )
     }
@@ -1109,8 +1123,8 @@ export default function SnakeGame() {
     let x, y;
 
     while (!validPosition) {
-      x = Math.random() * (canvasWidth - 40) + 20;
-      y = Math.random() * (canvasHeight - 40) + 20;
+      x = Math.random() * (dimensions.width - 40) + 20;
+      y = Math.random() * (dimensions.height - 40) + 20;
       validPosition = true;
 
       // Check distance from all snakes
@@ -1135,7 +1149,8 @@ export default function SnakeGame() {
     powerUpsRef.current.push(new PowerUp({ 
         x: x!,
         y: y!,
-      type 
+      type,
+      size: Math.min(dimensions.width, dimensions.height) / 40
     }));
 
     console.log(`Spawned ${type} power-up at`, { x, y });
@@ -1190,10 +1205,10 @@ export default function SnakeGame() {
             x: powerUp.position.x,
             y: powerUp.position.y,
             color: powerUp.color,
-            particleCount: 50,
+            particleCount: Math.floor(Math.min(dimensions.width, dimensions.height) / 20),
             lifetime: 60,
             speed: 3,
-            size: 4,
+            size: Math.min(dimensions.width, dimensions.height) / 150,
           })
         );
 
@@ -1258,23 +1273,6 @@ export default function SnakeGame() {
     await Transitions.fade(ctx, 'in', 300)
   }
 
-  // Update canvas size on window resize
-  useEffect(() => {
-    const handleResize = () => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
-
-      const { width, height } = getCanvasDimensions();
-      canvas.width = width;
-      canvas.height = height;
-    };
-
-    window.addEventListener('resize', handleResize);
-    handleResize(); // Initial size
-
-    return () => window.removeEventListener('resize', handleResize);
-  }, [isMobile]);
-
   // Handle touch controls
   const handleDirectionChange = (direction: { x: number; y: number }) => {
     setTouchDirection(direction);
@@ -1298,8 +1296,8 @@ export default function SnakeGame() {
   useEffect(() => {
     if (canvasRef.current) {
       const canvas = canvasRef.current;
-      canvas.width = canvasWidth;
-      canvas.height = canvasHeight;
+      canvas.width = dimensions.width;
+      canvas.height = dimensions.height;
       
       // Start game loop
       if (gameState === "playing") {
@@ -1366,18 +1364,40 @@ export default function SnakeGame() {
     });
   };
 
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setDimensions({
+        width: Math.min(window.innerWidth * 0.9, 1600),
+        height: Math.min(window.innerHeight * 0.8, 1000)
+      })
+    }
+    
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  // Update canvas size when dimensions change
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    
+    canvas.width = dimensions.width
+    canvas.height = dimensions.height
+  }, [dimensions])
+
   // Render game controls
   return (
-    <div className="relative">
+    <div className="relative w-full max-w-[1600px] mx-auto flex items-center justify-center p-4">
       {loading ? (
         <LoadingScreen progress={loadingProgress} />
       ) : (
         <>
           <canvas
             ref={canvasRef}
-            width={canvasWidth}
-            height={canvasHeight}
-            className="border border-cyan-900 rounded-lg shadow-lg shadow-cyan-500/20"
+            width={dimensions.width}
+            height={dimensions.height}
+            className="border border-cyan-900 rounded-lg shadow-lg shadow-cyan-500/20 max-w-full h-auto"
           />
 
           {gameState === "menu" && renderMenu()}

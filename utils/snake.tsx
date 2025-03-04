@@ -23,6 +23,7 @@ interface SnakeSegment {
     initialLength: number
     initialAngle: number
     speed: number
+    size?: number  // Optional size parameter
   }
   
   export class Snake {
@@ -48,9 +49,9 @@ interface SnakeSegment {
   
     constructor(options: SnakeOptions) {
       this.angle = options.initialAngle
-      this.speed = options.speed *1.75  
-      this.baseSpeed = options.speed *1.75
-      this.currentSpeed = options.speed *1.75
+      this.speed = options.speed *1.5  
+      this.baseSpeed = options.speed *1.5
+      this.currentSpeed = options.speed *1.5
       this.color = options.color
       this.headColor = options.headColor
       this.targetLength = options.initialLength

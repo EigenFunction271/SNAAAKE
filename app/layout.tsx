@@ -1,7 +1,7 @@
 import './globals.css';
 
 export const metadata = {
-  title: 'Neon Snake',
+  title: 'Snapdragon',
   description: 'A modern take on the classic snake game',
 }
 

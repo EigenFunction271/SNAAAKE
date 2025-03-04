@@ -6,12 +6,13 @@ interface PowerUpOptions {
   x: number;
   y: number;
   type: PowerUpType;
+  size?: number;
 }
 
 export class PowerUp {
   position: { x: number; y: number };
   type: PowerUpType;
-  radius: number = 15;
+  radius: number;
   duration: number;
   color: string;
   pulseAmount: number = 0;
@@ -19,11 +20,12 @@ export class PowerUp {
   rotation: number = 0;
   private pulsePhase: number = 0;
   private originalRadius: number;
+  glowPhase: number = 0;
 
   constructor(options: PowerUpOptions) {
     this.position = { x: options.x, y: options.y };
     this.type = options.type;
-    this.radius = 15;
+    this.radius = options.size || 15;
     this.originalRadius = this.radius;
     
     // Set properties based on type
