@@ -1,5 +1,6 @@
+"use client"
+
 import { useState } from "react";
-import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -9,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AIBehaviorType, AI_BEHAVIORS } from "@/utils/ai-behaviors";
+import { NeonSlider } from "@/components/ui/neon-slider";
 
 interface GameSetupProps {
   onStart: (config: GameConfig) => void;
@@ -38,92 +40,105 @@ export function GameSetup({ onStart }: GameSetupProps) {
     });
   };
 
+  const getBehaviorColor = (behavior: AIBehaviorType): "cyan" | "purple" | "blue" | "green" | "pink" => {
+    const colorMap: Record<string, "cyan" | "purple" | "blue" | "green" | "pink"> = {
+      survivor: "cyan",
+      aggressive: "pink",
+      territorial: "purple",
+      hunter: "green",
+      mixed: "blue",
+    }
+    return colorMap[behavior] || "cyan"
+  }
+
   return (
-    <div className="w-full max-w-4xl p-6 space-y-8">
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600">
-          Snapdragon
-        </h1>
-        <p className="text-cyan-400">Configure your game</p>
-      </div>
+    <div className="w-full min-h-screen flex flex-col items-center justify-center p-6 bg-black bg-opacity-90 bg-[radial-gradient(circle_at_center,rgba(6,182,212,0.1)_0%,transparent_70%)]">
+      <div className="max-w-4xl w-full space-y-8">
+        <div className="text-center space-y-4">
+          <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-600 animate-pulse drop-shadow-[0_0_15px_rgba(6,182,212,0.7)]">
+            SNAPDRAGON
+          </h1>
+          <p className="text-cyan-400 text-xl tracking-wider uppercase">Configure Your Game</p>
+        </div>
 
-      <Card className="bg-black/50 border-cyan-500/30">
-        <CardHeader>
-          <CardTitle>AI Opponents</CardTitle>
-          <CardDescription>
-            Select the number of AI snakes and their behaviors
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            <div className="space-y-4">
-              <label className="text-sm text-cyan-400">
-                Number of AI Snakes: {aiCount}
-              </label>
-              <Slider
-                value={[aiCount]}
-                onValueChange={([value]) => setAICount(value)}
-                min={1}
-                max={10}
-                step={1}
-                className="w-full"
-              />
-            </div>
+        <Card className="bg-black/50 border-cyan-500/30">
+          <CardHeader>
+            <CardTitle>AI Opponents</CardTitle>
+            <CardDescription>
+              Select the number of AI snakes and their behaviors
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              <div className="space-y-4">
+                <label className="text-sm text-cyan-400">
+                  Number of AI Snakes: {aiCount}
+                </label>
+                <NeonSlider
+                  value={[aiCount]}
+                  onValueChange={([value]) => setAICount(value)}
+                  min={1}
+                  max={10}
+                  step={1}
+                  className="w-full"
+                />
+              </div>
 
-            <div className="space-y-4">
-              <label className="text-sm text-cyan-400">AI Behaviors</label>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Array.from({ length: aiCount }).map((_, index) => (
-                  <Card
-                    key={index}
-                    className="bg-black/30 border-cyan-500/20"
-                  >
-                    <CardHeader className="p-4">
-                      <CardTitle className="text-sm">
-                        AI Snake {index + 1}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                      <div className="grid grid-cols-2 gap-2">
-                        {Object.entries(AI_BEHAVIORS).map(([key, behavior]) => (
-                          <Button
-                            key={key}
-                            variant={
-                              selectedBehaviors[index] === key
-                                ? "default"
-                                : "outline"
-                            }
-                            className="w-full"
-                            style={{
-                              borderColor:
+              <div className="space-y-4">
+                <label className="text-sm text-cyan-400">AI Behaviors</label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Array.from({ length: aiCount }).map((_, index) => (
+                    <Card
+                      key={index}
+                      className="bg-black/30 border-cyan-500/20"
+                    >
+                      <CardHeader className="p-4">
+                        <CardTitle className="text-sm">
+                          AI Snake {index + 1}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        <div className="grid grid-cols-2 gap-2">
+                          {Object.entries(AI_BEHAVIORS).map(([key, behavior]) => (
+                            <Button
+                              key={key}
+                              variant={
                                 selectedBehaviors[index] === key
-                                  ? behavior.color
-                                  : undefined,
-                            }}
-                            onClick={() =>
-                              handleBehaviorChange(index, key as AIBehaviorType)
-                            }
-                          >
-                            {behavior.name}
-                          </Button>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                                  ? "default"
+                                  : "outline"
+                              }
+                              className="w-full"
+                              style={{
+                                borderColor:
+                                  selectedBehaviors[index] === key
+                                    ? behavior.color
+                                    : undefined,
+                              }}
+                              onClick={() =>
+                                handleBehaviorChange(index, key as AIBehaviorType)
+                              }
+                            >
+                              {behavior.name}
+                            </Button>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      <Button
-        className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
-        size="lg"
-        onClick={handleStart}
-      >
-        Start Game
-      </Button>
+        <Button
+          className="w-full bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-600 hover:to-purple-700"
+          size="lg"
+          onClick={handleStart}
+        >
+          Start Game
+        </Button>
+      </div>
     </div>
   );
 } 
